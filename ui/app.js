@@ -69,8 +69,8 @@ function updateStatus(state, mainText, subText) {
 function resetState() {
     setTimeout(() => {
         // Guard: only reset if the service layer is no longer processing
-        if (typeof isProcessing !== 'undefined' && !isProcessing) {
-            updateStatus('default', 'Awaiting Document', 'Drag & drop a protected PDF here, or click to browse');
+        if (!isProcessing) {
+            updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
         }
     }, 6000);
 }
@@ -131,7 +131,7 @@ function preventDefaults(e) {
 
 ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        if (typeof isProcessing !== 'undefined' && !isProcessing) dropZone.classList.add('dragover');
+        if (!isProcessing) dropZone.classList.add('dragover');
     }, false);
 });
 
@@ -156,12 +156,12 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 dropZone.addEventListener('click', () => {
-    if (typeof isProcessing !== 'undefined' && !isProcessing) fileInput.click();
+    if (!isProcessing) fileInput.click();
 });
 
 // Keyboard accessibility: trigger specific actions on Enter/Space
 dropZone.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && (typeof isProcessing === 'undefined' || !isProcessing)) {
+    if ((e.key === 'Enter' || e.key === ' ') && !isProcessing) {
         preventDefaults(e);
         fileInput.click();
     }
