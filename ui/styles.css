@@ -407,6 +407,27 @@ input[type="file"] {
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 85vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+/* WebKit scrollbar — respects border-radius and glassmorphism */
+.about-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.about-panel::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 12px 0;
+}
+
+.about-panel::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+}
+
+.about-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.6);
 }
 
 .modal-backdrop.open .about-panel {
