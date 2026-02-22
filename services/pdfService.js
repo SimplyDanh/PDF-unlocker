@@ -48,7 +48,7 @@ async function processFile(file, callbacks, config = { returnBlob: false }) {
 
     if (!file || file.type !== "application/pdf") {
         onStatus('error', 'Invalid Format', 'Please upload a valid PDF document.');
-        return;
+        return null;
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -95,7 +95,6 @@ async function processFile(file, callbacks, config = { returnBlob: false }) {
         } catch (e) { console.warn('FS cleanup (output) failed:', e); }
 
         const outputBlob = new Blob([outputFile], { type: "application/pdf" });
-        const url = URL.createObjectURL(outputBlob);
 
         const originalName = file.name;
         const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
@@ -106,6 +105,7 @@ async function processFile(file, callbacks, config = { returnBlob: false }) {
             return outputBlob;
         } else {
             // Fallback: Individual auto-download to save RAM
+            const url = URL.createObjectURL(outputBlob);
             const a = document.createElement('a');
             a.href = url;
             a.download = newFilename;
