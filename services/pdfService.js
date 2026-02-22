@@ -40,85 +40,91 @@ async function initWasm() {
  * @param {function} callbacks.onStatus - Called with (state, mainText, subText).
  * @param {function} callbacks.onReset - Called after processing to reset UI state.
  * @param {HTMLInputElement} callbacks.fileInput - The file input element to clear.
+ * @returns {Promise<void>} Resolves when processing is fully complete or aborted.
  */
 async function processFile(file, callbacks) {
-    const { onStatus, onReset, fileInput } = callbacks;
+    return new Promise(async (resolve, reject) => {
+        const { onStatus, fileInput } = callbacks;
 
-    if (!file || file.type !== "application/pdf") {
-        onStatus('error', 'Invalid Format', 'Please upload a valid PDF document.');
-        onReset();
-        return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-        onStatus('error', 'File Too Large', `Maximum file size is ${MAX_FILE_SIZE_MB} MB.`);
-        onReset();
-        return;
-    }
-
-    if (isProcessing) return;
-    isProcessing = true;
-    onStatus('processing', 'Unlocking locally...', 'Parsing structure and removing restrictions securely.');
-
-    try {
-        if (!qpdfModule) await initWasm();
-
-        const fileBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(fileBuffer);
-
-        // Magic-byte validation: PDF files must start with %PDF
-        if (uint8Array.length < 4 ||
-            uint8Array[0] !== 0x25 || uint8Array[1] !== 0x50 ||
-            uint8Array[2] !== 0x44 || uint8Array[3] !== 0x46) {
-            onStatus('error', 'Invalid PDF', 'File header does not match a valid PDF signature.');
-            onReset();
-            isProcessing = false;
-            fileInput.value = '';
+        if (!file || file.type !== "application/pdf") {
+            onStatus('error', 'Invalid Format', 'Please upload a valid PDF document.');
+            resolve();
             return;
         }
 
-        const inputName = `input_${Date.now()}.pdf`;
-        const outputName = `output_${Date.now()}.pdf`;
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            onStatus('error', 'File Too Large', `Maximum file size is ${MAX_FILE_SIZE_MB} MB.`);
+            resolve();
+            return;
+        }
 
-        qpdfModule.FS.writeFile(inputName, uint8Array);
-        // Zero the source buffer after writing to WASM FS
-        uint8Array.fill(0);
+        if (isProcessing) {
+            resolve();
+            return;
+        }
+        isProcessing = true;
+        onStatus('processing', 'Unlocking locally...', 'Parsing structure and removing restrictions securely.');
 
-        qpdfModule.callMain(["--decrypt", inputName, outputName]);
-        const outputFile = qpdfModule.FS.readFile(outputName);
-
-        // Reliable WASM FS cleanup with verification
         try {
-            qpdfModule.FS.unlink(inputName);
-        } catch (e) { console.warn('FS cleanup (input) failed:', e); }
-        try {
-            qpdfModule.FS.unlink(outputName);
-        } catch (e) { console.warn('FS cleanup (output) failed:', e); }
+            if (!qpdfModule) await initWasm();
 
-        const outputBlob = new Blob([outputFile], { type: "application/pdf" });
-        const url = URL.createObjectURL(outputBlob);
+            const fileBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(fileBuffer);
 
-        const originalName = file.name;
-        const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
-        const newFilename = `${nameWithoutExt}_unlocked.pdf`;
+            // Magic-byte validation: PDF files must start with %PDF
+            if (uint8Array.length < 4 ||
+                uint8Array[0] !== 0x25 || uint8Array[1] !== 0x50 ||
+                uint8Array[2] !== 0x44 || uint8Array[3] !== 0x46) {
+                onStatus('error', 'Invalid PDF', 'File header does not match a valid PDF signature.');
+                isProcessing = false;
+                fileInput.value = '';
+                resolve();
+                return;
+            }
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = newFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+            const inputName = `input_${Date.now()}.pdf`;
+            const outputName = `output_${Date.now()}.pdf`;
 
-        onStatus('success', 'Success! Downloading...', 'Your unlocked document is ready.');
-        onReset();
+            qpdfModule.FS.writeFile(inputName, uint8Array);
+            // Zero the source buffer after writing to WASM FS
+            uint8Array.fill(0);
 
-    } catch (error) {
-        console.error("PDF Processing error:", error);
-        onStatus('error', 'Processing Failed', 'The document appears to be corrupted or too heavily encrypted.');
-        onReset();
-    } finally {
-        isProcessing = false;
-        fileInput.value = '';
-    }
+            qpdfModule.callMain(["--decrypt", inputName, outputName]);
+            const outputFile = qpdfModule.FS.readFile(outputName);
+
+            // Reliable WASM FS cleanup with verification
+            try {
+                qpdfModule.FS.unlink(inputName);
+            } catch (e) { console.warn('FS cleanup (input) failed:', e); }
+            try {
+                qpdfModule.FS.unlink(outputName);
+            } catch (e) { console.warn('FS cleanup (output) failed:', e); }
+
+            const outputBlob = new Blob([outputFile], { type: "application/pdf" });
+            const url = URL.createObjectURL(outputBlob);
+
+            const originalName = file.name;
+            const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
+            const newFilename = `${nameWithoutExt}_unlocked.pdf`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = newFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            onStatus('success', 'Success! Downloading...', `${newFilename} is ready.`);
+            resolve();
+
+        } catch (error) {
+            console.error("PDF Processing error:", error);
+            onStatus('error', 'Processing Failed', 'The document appears to be corrupted or too heavily encrypted.');
+            resolve();
+        } finally {
+            isProcessing = false;
+            fileInput.value = '';
+        }
+    });
 }

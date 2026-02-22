@@ -75,12 +75,49 @@ function resetState() {
     }, 6000);
 }
 
+let fileQueue = [];
+let isQueueRunning = false;
+
 // --- Callbacks object passed to the service layer ---
 const serviceCallbacks = {
-    onStatus: updateStatus,
-    onReset: resetState,
+    onStatus: (state, mainText, subText) => {
+        // Only update the main UI text if we aren't in the middle of a queue
+        // The queue manager handles the 'Unlocking (x/y)...' text
+        if (state !== 'processing') {
+            updateStatus(state, mainText, subText);
+        } else {
+            // For processing state, just spin the UI but let the queue manager set the text
+            updateStatus('processing', statusText.textContent, subStatusText.textContent);
+        }
+    },
     fileInput: fileInput
 };
+
+// --- Queue Manager ---
+async function processQueue() {
+    if (isQueueRunning) return;
+    isQueueRunning = true;
+
+    const totalFilesThisBatch = fileQueue.length;
+    let currentProcessed = 0;
+
+    while (fileQueue.length > 0) {
+        const currentFile = fileQueue.shift();
+        currentProcessed++;
+
+        // Update UI to show progress
+        updateStatus('processing', `Unlocking (${currentProcessed}/${totalFilesThisBatch})...`, `Processing: ${currentFile.name}`);
+
+        // Await the file processing so we never crash browser RAM limits
+        await processFile(currentFile, serviceCallbacks);
+    }
+
+    isQueueRunning = false;
+    // Delay slightly to let the last success message show
+    setTimeout(() => {
+        resetState();
+    }, 4000);
+}
 
 // --- Interaction Logic ---
 function preventDefaults(e) {
@@ -105,7 +142,16 @@ function preventDefaults(e) {
 });
 
 dropZone.addEventListener('drop', (e) => {
-    if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0], serviceCallbacks);
+    if (e.dataTransfer.files.length > 0) {
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type === "application/pdf");
+        if (files.length === 0) {
+            updateStatus('error', 'Invalid Format', 'Please upload valid PDF documents.');
+            resetState();
+        } else {
+            fileQueue.push(...files);
+            processQueue();
+        }
+    }
     dropZone.blur();
 });
 
@@ -122,7 +168,11 @@ dropZone.addEventListener('keydown', (e) => {
 });
 
 fileInput.addEventListener('change', function () {
-    if (this.files.length > 0) processFile(this.files[0], serviceCallbacks);
+    if (this.files.length > 0) {
+        const files = Array.from(this.files).filter(f => f.type === "application/pdf");
+        fileQueue.push(...files);
+        processQueue();
+    }
     dropZone.blur();
 });
 
