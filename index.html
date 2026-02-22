@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://unpkg.com; img-src 'self' data:; worker-src blob:;">
+    <meta name="author" content="Danh Michael Mujar">
+    <title>Secure PDF Unlocker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="ui/styles.css">
+</head>
+
+<body>
+
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+        <svg class="moon-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+        <svg class="sun-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+            </path>
+        </svg>
+    </button>
+
+    <header>
+        <h1>Secure PDF Unlocker</h1>
+        <p class="subtitle">Remove owner restrictions strictly client-side. Financial-grade privacy ensures zero cloud
+            upload.</p>
+    </header>
+
+    <main>
+        <!-- Added ARIA roles for accessibility -->
+        <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Upload PDF file to unlock"
+            aria-live="polite">
+            <!-- Upload Icon -->
+            <svg class="icon default-icon" id="status-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+
+            <!-- Document Pulse Icon (Processing) -->
+            <svg class="processing-pulse" id="spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
+            </svg>
+
+            <!-- Status Region -->
+            <div id="status-region">
+                <h2 class="status-text" id="status-text">Awaiting Document</h2>
+                <p class="sub-status-text" id="sub-status-text">Drag & drop a protected PDF here, or click to browse</p>
+            </div>
+
+            <input type="file" id="file-input" accept="application/pdf" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="shield-container">
+            <div class="shield">
+                <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                100% Local Processing &bull; Bank-grade Privacy
+            </div>
+        </div>
+    </main>
+
+    <!-- About Button (Lower Right) -->
+    <button class="about-toggle" id="about-toggle" aria-label="About this tool">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>About</span>
+    </button>
+
+    <!-- About Modal Overlay -->
+    <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+        <div class="about-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button class="modal-close" id="modal-close" aria-label="Close modal">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+            <h2 id="modal-title">About Secure PDF Unlocker</h2>
+
+            <div class="about-section">
+                <p>A strictly client-side web application that removes owner-level restrictions (printing, copying,
+                    editing) from protected PDF documents. Your files never leave your device.</p>
+            </div>
+
+            <div class="about-grid" style="margin-top: 1rem;">
+                <div class="about-section">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                        Tech Stack
+                    </h3>
+                    <div style="margin-top: 0.5rem;">
+                        <span class="tech-badge">HTML5/CSS3</span>
+                        <span class="tech-badge">Vanilla JS</span>
+                        <span class="tech-badge">WebAssembly</span>
+                        <span class="tech-badge">QPDF</span>
+                    </div>
+                </div>
+
+                <div class="about-section">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-.68-.057-1.35-.168-2.016z">
+                            </path>
+                        </svg>
+                        Security Architecture
+                    </h3>
+                    <ul>
+                        <li>Zero server communication / No API</li>
+                        <li>Content Security Policy (CSP)</li>
+                        <li>Subresource Integrity (SRI) checks</li>
+                        <li>Memory source buffer zeroing</li>
+                        <li>PDF magic-byte validation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="about-grid">
+                <div class="about-section">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
+                        </svg>
+                        Features
+                    </h3>
+                    <ul>
+                        <li>100% offline-capable after first load</li>
+                        <li>Accessible drag & drop functionality</li>
+                        <li>System-aware dark/light modes</li>
+                        <li>Handles large files (up to 100 MB)</li>
+                    </ul>
+                </div>
+
+                <div class="about-section">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                        Limitations
+                    </h3>
+                    <ul>
+                        <li>Cannot decrypt <i>User Password</i> protected PDFs</li>
+                        <li>Single-file processing only</li>
+                        <li>Browser RAM limits apply for huge files</li>
+                        <li>Does not support batch/multi-file processing</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Developer Credit -->
+            <div class="dev-credit">
+                <div class="dev-credit-qr">
+                    <img src="frame.png" alt="Scan to connect on LinkedIn">
+                </div>
+                <div class="dev-credit-info">
+                    <strong>Built by Danh Michael Mujar</strong>
+                    <span>Business Support Senior Specialist at WTW who believes neither your potential nor your PDFs
+                        should ever stay locked. Powered by curiosity, caffeine, and Generative AI.</span>
+                    <a href="https://www.linkedin.com/in/danh-michael-mujar-599112210" target="_blank"
+                        rel="noopener noreferrer">Connect on LinkedIn &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.js"
+        integrity="sha384-viHHfnvZlwDzjAQCrTUX3UR1zDr3OW9ItyLOqwH2wTHYHXWK8NdKi5LFp++BT8NL"
+        crossorigin="anonymous"></script>
+    <script src="services/pdfService.js"></script>
+    <script src="ui/app.js" defer></script>
+</body>
+
+</html>
