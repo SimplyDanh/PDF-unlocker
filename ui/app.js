@@ -68,8 +68,8 @@ function updateStatus(state, mainText, subText) {
 
 function resetState() {
     setTimeout(() => {
-        // Guard: only reset if the service layer is no longer processing
-        if (!isProcessing) {
+        // Guard: only reset if the service layer and queue are no longer processing
+        if (!isProcessing && !isQueueRunning) {
             updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
         }
     }, 6000);
@@ -93,6 +93,9 @@ const serviceCallbacks = {
     fileInput: fileInput
 };
 
+const ZIP_MEMORY_LIMIT_MB = 150;
+const ZIP_MEMORY_LIMIT_BYTES = ZIP_MEMORY_LIMIT_MB * 1024 * 1024;
+
 // --- Queue Manager ---
 async function processQueue() {
     if (isQueueRunning) return;
@@ -101,6 +104,14 @@ async function processQueue() {
     const totalFilesThisBatch = fileQueue.length;
     let currentProcessed = 0;
 
+    // Calculate total size to determine if we can safely zip in RAM
+    const totalBatchSize = fileQueue.reduce((acc, f) => acc + f.size, 0);
+    // Use ZIP only if memory is under threshold and there is more than 1 file
+    const useZip = (totalBatchSize < ZIP_MEMORY_LIMIT_BYTES) && (totalFilesThisBatch > 1);
+
+    let zip = useZip ? new JSZip() : null;
+    let successfulBlobs = 0;
+
     while (fileQueue.length > 0) {
         const currentFile = fileQueue.shift();
         currentProcessed++;
@@ -108,8 +119,34 @@ async function processQueue() {
         // Update UI to show progress
         updateStatus('processing', `Unlocking (${currentProcessed}/${totalFilesThisBatch})...`, `Processing: ${currentFile.name}`);
 
-        // Await the file processing so we never crash browser RAM limits
-        await processFile(currentFile, serviceCallbacks);
+        // Await the file processing. Returns Blob if useZip is true, else null.
+        const blob = await processFile(currentFile, serviceCallbacks, { returnBlob: useZip });
+
+        if (useZip && blob) {
+            const originalName = currentFile.name;
+            const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
+            zip.file(`${nameWithoutExt}_unlocked.pdf`, blob);
+            successfulBlobs++;
+        }
+    }
+
+    if (useZip && successfulBlobs > 0) {
+        updateStatus('processing', 'Compressing files...', 'Building your ZIP archive securely in memory.');
+        try {
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(zipBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Unlocked_PDFs.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            updateStatus('success', 'Success! Downloading ZIP...', 'All documents preserved and unlocked.');
+        } catch (error) {
+            console.error("ZIP Generation error:", error);
+            updateStatus('error', 'ZIP Failed', 'Failed to compress files due to browser memory limits.');
+        }
     }
 
     isQueueRunning = false;
@@ -131,7 +168,7 @@ function preventDefaults(e) {
 
 ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        if (!isProcessing) dropZone.classList.add('dragover');
+        if (!isProcessing && !isQueueRunning) dropZone.classList.add('dragover');
     }, false);
 });
 
@@ -156,12 +193,12 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 dropZone.addEventListener('click', () => {
-    if (!isProcessing) fileInput.click();
+    if (!isProcessing && !isQueueRunning) fileInput.click();
 });
 
 // Keyboard accessibility: trigger specific actions on Enter/Space
 dropZone.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !isProcessing) {
+    if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !isQueueRunning) {
         preventDefaults(e);
         fileInput.click();
     }

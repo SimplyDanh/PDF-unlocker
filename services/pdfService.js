@@ -39,9 +39,11 @@ async function initWasm() {
  * @param {object} callbacks - UI callback functions.
  * @param {function} callbacks.onStatus - Called with (state, mainText, subText).
  * @param {HTMLInputElement} callbacks.fileInput - The file input element to clear.
- * @returns {Promise<void>} Resolves when processing is fully complete or aborted.
+ * @param {object} config - Configuration options.
+ * @param {boolean} config.returnBlob - Whether to return the file Blob instead of auto-downloading.
+ * @returns {Promise<Blob|null>} Resolves with the Blob if returnBlob is true, otherwise null.
  */
-async function processFile(file, callbacks) {
+async function processFile(file, callbacks, config = { returnBlob: false }) {
     const { onStatus, fileInput } = callbacks;
 
     if (!file || file.type !== "application/pdf") {
@@ -51,10 +53,10 @@ async function processFile(file, callbacks) {
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
         onStatus('error', 'File Too Large', `Maximum file size is ${MAX_FILE_SIZE_MB} MB.`);
-        return;
+        return null;
     }
 
-    if (isProcessing) return;
+    if (isProcessing) return null;
     isProcessing = true;
     onStatus('processing', 'Unlocking locally...', 'Parsing structure and removing restrictions securely.');
 
@@ -71,7 +73,7 @@ async function processFile(file, callbacks) {
             onStatus('error', 'Invalid PDF', 'File header does not match a valid PDF signature.');
             isProcessing = false;
             fileInput.value = '';
-            return;
+            return null;
         }
 
         const inputName = `input_${Date.now()}.pdf`;
@@ -99,15 +101,22 @@ async function processFile(file, callbacks) {
         const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
         const newFilename = `${nameWithoutExt}_unlocked.pdf`;
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = newFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (config.returnBlob) {
+            // Hand the Blob back to the queue manager for Zipping
+            return outputBlob;
+        } else {
+            // Fallback: Individual auto-download to save RAM
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = newFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
 
-        onStatus('success', 'Success! Downloading...', `${newFilename} is ready.`);
+            onStatus('success', 'Success! Downloading...', `${newFilename} is ready.`);
+            return null;
+        }
 
     } catch (error) {
         console.error("PDF Processing error:", error);

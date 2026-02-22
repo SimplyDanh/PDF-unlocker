@@ -167,6 +167,7 @@
                         <li>Cannot decrypt <i>User Password</i> protected PDFs</li>
                         <li>Sequential processing (one file at a time)</li>
                         <li>Browser RAM limits apply for huge files</li>
+                        <li>Batches over 150MB fallback to individual downloads</li>
                     </ul>
                 </div>
             </div>
@@ -187,6 +188,7 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.js"
         integrity="sha384-viHHfnvZlwDzjAQCrTUX3UR1zDr3OW9ItyLOqwH2wTHYHXWK8NdKi5LFp++BT8NL"
         crossorigin="anonymous"></script>
