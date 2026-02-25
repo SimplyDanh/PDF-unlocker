@@ -101,6 +101,13 @@ body {
     }
 }
 
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    body {
+        animation: none;
+    }
+}
+
 header {
     width: 100%;
     max-width: 42rem;
@@ -695,4 +702,13 @@ input[type="file"] {
 .about-toggle svg {
     width: 20px;
     height: 20px;
+}
+
+/* --- Margins --- */
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
 }

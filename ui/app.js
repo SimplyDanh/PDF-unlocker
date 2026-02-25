@@ -4,7 +4,7 @@
  * Depends on: pdfService.js (loaded first via classic script tag).
  */
 
-/* global initWasm, processFile */
+/* global pdfService */
 
 // --- DOM References ---
 const dropZone = document.getElementById('drop-zone');
@@ -15,7 +15,7 @@ const statusIcon = document.getElementById('status-icon');
 const spinner = document.getElementById('spinner');
 
 // --- WASM Bootstrap ---
-initWasm().catch(err => {
+pdfService.initWasm().catch(err => {
     console.error("Initialization error:", err);
     updateStatus('error', 'Initialization Error', 'Failed to load the engine. Please check your connection and reload.');
 });
@@ -27,16 +27,19 @@ const SVGS = {
     error: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`
 };
 
-// Safe SVG update — avoids innerHTML to prevent latent XSS vectors
+// Safe SVG update — avoids innerHTML on the live document to prevent latent XSS vectors
 function setSvgContent(svgElement, pathMarkup) {
     while (svgElement.firstChild) {
         svgElement.removeChild(svgElement.firstChild);
     }
-    const temp = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    temp.innerHTML = pathMarkup;
-    while (temp.firstChild) {
-        svgElement.appendChild(temp.firstChild);
-    }
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${pathMarkup}</svg>`, 'image/svg+xml');
+    const newPaths = doc.documentElement.childNodes;
+
+    // Convert NodeList to array before appending to avoid live-collection mutation issues
+    Array.from(newPaths).forEach(node => {
+        svgElement.appendChild(node);
+    });
 }
 
 // --- Status Management ---
@@ -69,12 +72,13 @@ function updateStatus(state, mainText, subText) {
 function resetState() {
     setTimeout(() => {
         // Guard: only reset if the service layer and queue are no longer processing
-        if (!isProcessing && !isQueueRunning) {
+        if (!pdfService.isProcessing && !isQueueRunning) {
             updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
         }
     }, 6000);
 }
 
+const MAX_BATCH_FILES = 20;
 let fileQueue = [];
 let isQueueRunning = false;
 
@@ -120,7 +124,7 @@ async function processQueue() {
         updateStatus('processing', `Unlocking (${currentProcessed}/${totalFilesThisBatch})...`, `Processing: ${currentFile.name}`);
 
         // Await the file processing. Returns Blob if useZip is true, else null.
-        const blob = await processFile(currentFile, serviceCallbacks, { returnBlob: useZip });
+        const blob = await pdfService.processFile(currentFile, serviceCallbacks, { returnBlob: useZip });
 
         if (useZip && blob) {
             const originalName = currentFile.name;
@@ -168,7 +172,7 @@ function preventDefaults(e) {
 
 ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        if (!isProcessing && !isQueueRunning) dropZone.classList.add('dragover');
+        if (!pdfService.isProcessing && !isQueueRunning) dropZone.classList.add('dragover');
     }, false);
 });
 
@@ -178,27 +182,36 @@ function preventDefaults(e) {
     }, false);
 });
 
+function queueFiles(fileList) {
+    const files = Array.from(fileList).filter(f => f.type === "application/pdf");
+    if (files.length === 0) {
+        updateStatus('error', 'Invalid Format', 'Please upload valid PDF documents.');
+        resetState();
+        return;
+    }
+    if (files.length > MAX_BATCH_FILES) {
+        updateStatus('error', 'Batch Limit Exceeded', `Maximum batch size is ${MAX_BATCH_FILES} files.`);
+        resetState();
+        return;
+    }
+    fileQueue.push(...files);
+    processQueue();
+}
+
 dropZone.addEventListener('drop', (e) => {
     if (e.dataTransfer.files.length > 0) {
-        const files = Array.from(e.dataTransfer.files).filter(f => f.type === "application/pdf");
-        if (files.length === 0) {
-            updateStatus('error', 'Invalid Format', 'Please upload valid PDF documents.');
-            resetState();
-        } else {
-            fileQueue.push(...files);
-            processQueue();
-        }
+        queueFiles(e.dataTransfer.files);
     }
     dropZone.blur();
 });
 
 dropZone.addEventListener('click', () => {
-    if (!isProcessing && !isQueueRunning) fileInput.click();
+    if (!pdfService.isProcessing && !isQueueRunning) fileInput.click();
 });
 
 // Keyboard accessibility: trigger specific actions on Enter/Space
 dropZone.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !isQueueRunning) {
+    if ((e.key === 'Enter' || e.key === ' ') && !pdfService.isProcessing && !isQueueRunning) {
         preventDefaults(e);
         fileInput.click();
     }
@@ -206,10 +219,9 @@ dropZone.addEventListener('keydown', (e) => {
 
 fileInput.addEventListener('change', function () {
     if (this.files.length > 0) {
-        const files = Array.from(this.files).filter(f => f.type === "application/pdf");
-        fileQueue.push(...files);
-        processQueue();
+        queueFiles(this.files);
     }
+    this.value = ''; // Reset input so same file can be re-selected if needed
     dropZone.blur();
 });
 

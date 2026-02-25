@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://unpkg.com; img-src 'self' data:; worker-src blob:;">
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://unpkg.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://unpkg.com; img-src 'self' data:; worker-src blob:;">
     <meta name="author" content="Danh Michael Mujar">
+    <meta name="description"
+        content="A strict client-side WebAssembly tool to instantly remove owner restrictions (printing, copying, editing) from PDF documents with zero cloud uploads.">
     <title>Secure PDF Unlocker</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,7 +104,7 @@
                     editing) from protected PDF documents. Your files never leave your device.</p>
             </div>
 
-            <div class="about-grid" style="margin-top: 1rem;">
+            <div class="about-grid mt-4">
                 <div class="about-section">
                     <h3>
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +113,7 @@
                         </svg>
                         Tech Stack
                     </h3>
-                    <div style="margin-top: 0.5rem;">
+                    <div class="mt-2">
                         <span class="tech-badge">HTML5/CSS3</span>
                         <span class="tech-badge">Vanilla JS</span>
                         <span class="tech-badge">WebAssembly</span>
