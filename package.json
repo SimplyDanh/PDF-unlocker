@@ -1,0 +1,25 @@
+{
+  "name": "pdf-unlocker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimplyDanh/PDF-unlocker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SimplyDanh/PDF-unlocker/issues"
+  },
+  "homepage": "https://github.com/SimplyDanh/PDF-unlocker#readme",
+  "devDependencies": {
+    "jsdom": "^28.1.0",
+    "vitest": "^4.0.18"
+  }
+}

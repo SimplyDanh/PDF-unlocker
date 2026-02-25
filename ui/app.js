@@ -17,8 +17,20 @@ const spinner = document.getElementById('spinner');
 // --- WASM Bootstrap ---
 pdfService.initWasm().catch(err => {
     console.error("Initialization error:", err);
-    updateStatus('error', 'Initialization Error', 'Failed to load the engine. Please check your connection and reload.');
+    if (pdfService.wasmSupportStatus === 'blocked') {
+        updateStatus('error', 'Browser Restricted', 'Your security policy blocks WebAssembly. Please try a different browser.');
+    } else {
+        updateStatus('error', 'Initialization Error', 'Failed to load the engine. Please check your connection and reload.');
+    }
 });
+
+// --- Async Font Swap (CSP-safe alternative to inline onload) ---
+const fontLink = document.getElementById('google-fonts');
+if (fontLink) {
+    fontLink.addEventListener('load', () => { fontLink.media = 'all'; });
+    // If already loaded (cached), swap immediately
+    if (fontLink.sheet) fontLink.media = 'all';
+}
 
 // --- SVG Path Constants ---
 const SVGS = {
@@ -51,13 +63,13 @@ function updateStatus(state, mainText, subText) {
     dropZone.setAttribute('aria-busy', state === 'processing' ? 'true' : 'false');
 
     dropZone.className = 'drop-zone';
-    spinner.style.display = 'none';
-    statusIcon.style.display = 'block';
+    spinner.classList.remove('visible');
+    statusIcon.classList.remove('hidden');
 
     if (state === 'processing') {
         dropZone.classList.add('processing');
-        spinner.style.display = 'block';
-        statusIcon.style.display = 'none';
+        spinner.classList.add('visible');
+        statusIcon.classList.add('hidden');
     } else if (state === 'success') {
         dropZone.classList.add('success');
         setSvgContent(statusIcon, SVGS.success);
@@ -72,7 +84,8 @@ function updateStatus(state, mainText, subText) {
 function resetState() {
     setTimeout(() => {
         // Guard: only reset if the service layer and queue are no longer processing
-        if (!pdfService.isProcessing && !isQueueRunning) {
+        // and WASM is actually supported
+        if (!pdfService.isProcessing && !isQueueRunning && pdfService.wasmSupportStatus !== 'blocked') {
             updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
         }
     }, 6000);
@@ -172,7 +185,7 @@ function preventDefaults(e) {
 
 ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        if (!pdfService.isProcessing && !isQueueRunning) dropZone.classList.add('dragover');
+        if (!pdfService.isProcessing && !isQueueRunning && pdfService.wasmSupportStatus !== 'blocked') dropZone.classList.add('dragover');
     }, false);
 });
 
@@ -183,6 +196,10 @@ function preventDefaults(e) {
 });
 
 function queueFiles(fileList) {
+    if (pdfService.wasmSupportStatus === 'blocked') {
+        updateStatus('error', 'Browser Restricted', 'WebAssembly is blocked. Please use a supported browser.');
+        return;
+    }
     const files = Array.from(fileList).filter(f => f.type === "application/pdf");
     if (files.length === 0) {
         updateStatus('error', 'Invalid Format', 'Please upload valid PDF documents.');
@@ -206,12 +223,12 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 dropZone.addEventListener('click', () => {
-    if (!pdfService.isProcessing && !isQueueRunning) fileInput.click();
+    if (!pdfService.isProcessing && !isQueueRunning && pdfService.wasmSupportStatus !== 'blocked') fileInput.click();
 });
 
 // Keyboard accessibility: trigger specific actions on Enter/Space
 dropZone.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !pdfService.isProcessing && !isQueueRunning) {
+    if ((e.key === 'Enter' || e.key === ' ') && !pdfService.isProcessing && !isQueueRunning && pdfService.wasmSupportStatus !== 'blocked') {
         preventDefaults(e);
         fileInput.click();
     }
@@ -246,17 +263,22 @@ themeToggle.addEventListener('click', () => {
 const aboutToggle = document.getElementById('about-toggle');
 const modalBackdrop = document.getElementById('modal-backdrop');
 const modalClose = document.getElementById('modal-close');
+const aboutPanel = document.querySelector('.about-panel');
 
 function openModal() {
     modalBackdrop.classList.add('open');
     modalBackdrop.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('modal-open');
+    // Move focus into the modal for screen readers
+    modalClose.focus();
 }
 
 function closeModal() {
     modalBackdrop.classList.remove('open');
     modalBackdrop.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    document.body.classList.remove('modal-open');
+    // Return focus to the trigger element
+    aboutToggle.focus();
 }
 
 aboutToggle.addEventListener('click', openModal);
@@ -267,9 +289,27 @@ modalBackdrop.addEventListener('click', (e) => {
     if (e.target === modalBackdrop) closeModal();
 });
 
-// Close modal on Escape key
+// Close modal on Escape key + focus trap
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) {
+    if (!modalBackdrop.classList.contains('open')) return;
+
+    if (e.key === 'Escape') {
         closeModal();
+        return;
+    }
+
+    // Focus trap: cycle Tab within modal
+    if (e.key === 'Tab') {
+        const focusable = aboutPanel.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
     }
 });

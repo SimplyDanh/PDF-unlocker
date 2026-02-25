@@ -8,6 +8,7 @@
 window.pdfService = (function () {
     let qpdfModule = null;
     let isProcessing = false;
+    let wasmSupportStatus = 'pending'; // 'pending' | 'supported' | 'blocked'
 
     const MAX_FILE_SIZE_MB = 100;
     const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -35,8 +36,15 @@ window.pdfService = (function () {
                 print: function (text) { console.log('stdout:', text); },
                 printErr: function (text) { console.error('stderr:', text); }
             });
+            wasmSupportStatus = 'supported';
             console.log("QPDF WASM initialized successfully.");
         } catch (error) {
+            // Detect CSP or WASM compilation blocking
+            if (error.name === 'CompileError' || 
+                error.message.includes('wasm-unsafe-eval') || 
+                error.message.includes('Content Security Policy')) {
+                wasmSupportStatus = 'blocked';
+            }
             console.error("Failed to initialize QPDF WASM module:", error);
             throw error;
         }
@@ -54,6 +62,11 @@ window.pdfService = (function () {
      */
     async function processFile(file, callbacks, config = { returnBlob: false }) {
         const { onStatus, fileInput } = callbacks;
+
+        if (wasmSupportStatus === 'blocked') {
+            onStatus('error', 'Browser Restricted', 'Your browser or organization security policy blocks WebAssembly.');
+            return null;
+        }
 
         if (!file || file.type !== "application/pdf") {
             onStatus('error', 'Invalid Format', 'Please upload a valid PDF document.');
@@ -140,6 +153,7 @@ window.pdfService = (function () {
     return {
         initWasm,
         processFile,
-        get isProcessing() { return isProcessing; }
+        get isProcessing() { return isProcessing; },
+        get wasmSupportStatus() { return wasmSupportStatus; }
     };
 })();

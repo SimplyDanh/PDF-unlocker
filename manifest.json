@@ -1,0 +1,23 @@
+{
+  "name": "Secure PDF Unlocker",
+  "short_name": "PDF Unlock",
+  "description": "Remove owner-level restrictions from PDF documents locally in your browser using WebAssembly.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+        "src": "favicon.svg",
+        "sizes": "any",
+        "type": "image/svg+xml",
+        "purpose": "maskable"
+    }
+  ]
+}

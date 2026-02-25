@@ -1,3 +1,9 @@
 .agent/
 AGENTS.md
 AUDIT_REPORT.md
+AUDIT_ROADMAP.md
+DEPENDENCY_AUDIT_REPORT.md
+LEGAL_AUDIT_REPORT.md
+PERFORMANCE_REPORT.md
+tests/perf_test.js
+node_modules/

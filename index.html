@@ -11,11 +11,19 @@
         content="A strict client-side WebAssembly tool to instantly remove owner restrictions (printing, copying, editing) from PDF documents with zero cloud uploads.">
     <title>Secure PDF Unlocker</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="dns-prefetch" href="https://unpkg.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
+    <link id="google-fonts"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap"
-        rel="stylesheet">
+        rel="stylesheet" media="print">
+    <noscript>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap"
+            rel="stylesheet">
+    </noscript>
     <link rel="stylesheet" href="ui/styles.css">
 </head>
 
@@ -45,21 +53,21 @@
             aria-live="polite">
             <!-- Upload Icon -->
             <svg class="icon default-icon" id="status-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg">
+                xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
 
             <!-- Document Pulse Icon (Processing) -->
             <svg class="processing-pulse" id="spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg">
+                xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                 </path>
             </svg>
 
             <!-- Status Region -->
-            <div id="status-region">
+            <div id="status-region" role="status" aria-live="polite">
                 <h2 class="status-text" id="status-text">Awaiting Document</h2>
                 <p class="sub-status-text" id="sub-status-text">Drag & drop protected PDFs here, or click to browse</p>
             </div>
@@ -69,7 +77,7 @@
 
         <div class="shield-container">
             <div class="shield">
-                <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path fill-rule="evenodd"
                         d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                         clip-rule="evenodd"></path>
@@ -105,15 +113,15 @@
             </div>
 
             <div class="about-grid mt-4">
-                <div class="about-section">
-                    <h3>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="about-section" aria-labelledby="section-tech">
+                    <h3 id="section-tech">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                         </svg>
                         Tech Stack
                     </h3>
-                    <div class="mt-2">
+                    <div class="mt-2" aria-label="List of technologies used">
                         <span class="tech-badge">HTML5/CSS3</span>
                         <span class="tech-badge">Vanilla JS</span>
                         <span class="tech-badge">WebAssembly</span>
@@ -121,9 +129,9 @@
                     </div>
                 </div>
 
-                <div class="about-section">
-                    <h3>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="about-section" aria-labelledby="section-security">
+                    <h3 id="section-security">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-.68-.057-1.35-.168-2.016z">
                             </path>
@@ -141,9 +149,9 @@
             </div>
 
             <div class="about-grid">
-                <div class="about-section">
-                    <h3>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="about-section" aria-labelledby="section-features">
+                    <h3 id="section-features">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
                             </path>
                         </svg>
@@ -159,9 +167,9 @@
                     </ul>
                 </div>
 
-                <div class="about-section">
-                    <h3>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="about-section" aria-labelledby="section-limitations">
+                    <h3 id="section-limitations">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
                             </path>
@@ -180,7 +188,7 @@
             <!-- Developer Credit -->
             <div class="dev-credit">
                 <div class="dev-credit-qr">
-                    <img src="frame.png" alt="Scan to connect on LinkedIn">
+                    <img src="frame.png" alt="Scan to connect on LinkedIn" loading="lazy">
                 </div>
                 <div class="dev-credit-info">
                     <strong>Built by Danh Michael Mujar</strong>
@@ -194,13 +202,14 @@
     </div>
 
     <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"
-        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
-        crossorigin="anonymous"></script>
+        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"
+        async></script>
     <script src="https://unpkg.com/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.js"
-        integrity="sha384-viHHfnvZlwDzjAQCrTUX3UR1zDr3OW9ItyLOqwH2wTHYHXWK8NdKi5LFp++BT8NL"
-        crossorigin="anonymous"></script>
-    <script src="services/pdfService.js"></script>
+        integrity="sha384-viHHfnvZlwDzjAQCrTUX3UR1zDr3OW9ItyLOqwH2wTHYHXWK8NdKi5LFp++BT8NL" crossorigin="anonymous"
+        defer></script>
+    <script src="services/pdfService.js" defer></script>
     <script src="ui/app.js" defer></script>
+    <script src="sw-register.js" defer></script>
 </body>
 
 </html>
