@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pdf-unlocker-v1';
+const CACHE_NAME = 'pdf-unlocker-v2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -39,25 +39,19 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch Event - Cache-First Strategy
+// Fetch Event - Network-First Strategy
+// Always tries network for fresh content; falls back to cache when offline.
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            if (response) {
-                return response;
-            }
-            return fetch(event.request).then((networkResponse) => {
-                // Cache fonts and CDN assets dynamically if they weren't in the initial list
-                if (event.request.url.includes('fonts.gstatic.com') || event.request.url.includes('unpkg.com')) {
-                    return caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                }
+        fetch(event.request).then((networkResponse) => {
+            // Update cache with fresh response
+            return caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, networkResponse.clone());
                 return networkResponse;
             });
         }).catch(() => {
-            // Offline fallback could go here if needed
+            // Network unavailable — serve from cache (offline mode)
+            return caches.match(event.request);
         })
     );
 });
