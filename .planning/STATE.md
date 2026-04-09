@@ -1,32 +1,33 @@
 # 🧠 Project State - PDF Unlocker v2.0
 
 ## 📍 Current Phase
-- **Phase 1: Engine Optimization & Worker Migration** (In Progress)
+- **Phase 4: Internalize engine dependencies** (Completed)
 
 ## 📊 Progress
-- **Phase 1:** [==========--] 85%
-- **Overall:** [====--------] 35%
+- **Phase 1:** [==========] 100%
+- **Phase 4:** [==========] 100%
+- **Overall:** [=======-----] 58%
 
 ## 🎯 Active Goals
-- Implement **Web Worker** architecture. (Completed Foundation)
-- Optimize **WASM loading** with streaming and SRI. (Completed: 01-02)
-- Enhance **UI Feedback** during engine initialization. (Completed: 01-03)
-- Verify **Performance & Integration**. (Completed: 01-04)
+- **Completed:** Implement Web Worker architecture.
+- **Completed:** Optimize WASM loading with streaming and SRI.
+- **Completed:** Internalize engine dependencies (JSZip, QPDF).
+- **Completed:** Achieve full offline capability via local asset hosting.
 
 ## 📝 Recent Activity
-- **2026-04-09:** Completed Task 1 & 2 of Phase 1: Migrated QPDF WASM engine to Web Worker.
-- **2026-04-09:** Implemented Streaming WASM instantiation with `instantiateStreaming` and enforced SRI (SHA-384).
-- **2026-04-09:** Enhanced Worker error handling for Network, CSP, and Integrity failures.
-- **2026-04-09:** Created performance benchmark `tests/perf_test.js` and verified UI responsiveness.
-- **2026-04-09:** Verified CSP compliance and full E2E system integration.
+- **2026-04-09:** Phase 4 Completed. Internalized all engine dependencies and achieved self-containment.
+- **2026-04-09:** Created assets/vendor/ structure and downloaded JSZip, QPDF assets.
+- **2026-04-09:** Updated index.html CSP and sw.js cache strategy for local assets.
+- **2026-04-09:** Updated pdfWorker.js to use local relative paths and maintain SRI.
+- **2026-04-09:** Phase 1 Fully Validated. Completed Worker migration and engine optimization.
 
 ## 🚧 Challenges & Blockers
 - **Done:** CSP Restrictions (addressed in worker and index.html).
-- **Done:** Efficient memory transfer (implemented zero-copy via Transferable Objects).
+- **Done:** Engine Internalization (addressed in Phase 4).
 
 ## 🔮 Next Steps
-1. Execute Plan 01-05: Final cleanup and Phase 1 Validation.
-2. Transition to Phase 2: User Experience & Feature Polish.
+1. Transition to Phase 2: User Experience & Batch Processing Polish.
+2. Implement Individual File Progress indicators.
 
 ## 📊 Performance Metrics
 | Phase | Plan | Duration | Tasks | Files |
@@ -35,7 +36,16 @@
 | 1     | 02   | 10m      | 2     | 2     |
 | 1     | 03   | 12m      | 3     | 3     |
 | 1     | 04   | 10m      | 3     | 3     |
+| 4     | 04   | 25m      | 3     | 6     |
 
 ## 👤 Session Info
 - **Last session:** 2026-04-09
-- **Stopped at:** Completed 01-04-PLAN.md (Performance & Integration)
+- **Stopped at:** Completed 04-PLAN.md (Internalize Engine Dependencies)
+
+## 📦 Accumulated Context
+### 🔄 Roadmap Evolution
+- **Phase 4 added:** Internalize Engine Dependencies (requested to make project self-contained for git push)
+- **Phase 4 Completed:** All engine assets now local; network reliance on unpkg.com removed.
+
+## 💡 Decisions Made
+- **2026-04-09:** Internalized all engine dependencies (JSZip, QPDF) to local assets and enforced local-only execution via CSP.

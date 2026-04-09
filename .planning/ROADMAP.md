@@ -53,7 +53,7 @@
 - **DEP-INT-04:** Maintain SRI (Subresource Integrity) for local assets.
 
 **Depends on:** Phase 1
-**Plans:** 1 planned
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 04-PLAN.md — Internalize Engine Dependencies
