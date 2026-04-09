@@ -5,7 +5,7 @@
  */
 
 window.pdfService = (function () {
-    const MAX_FILE_SIZE_MB = 100;
+    const MAX_FILE_SIZE_MB = 1024; // Increased to 1GB to leverage WorkerFS zero-copy mounting
     const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
     
     let wasmSupportStatus = 'pending'; // 'pending' | 'supported' | 'blocked'
@@ -133,15 +133,16 @@ window.pdfService = (function () {
          * Actually send the process command to the worker.
          */
         async function startTask(workerObj) {
-            const { file, callbacks } = workerObj.currentTask;
+            const { file } = workerObj.currentTask;
             
             try {
-                const fileBuffer = await file.arrayBuffer();
+                // Task 1 Refactor: Send File object directly to leverage WorkerFS zero-copy mounting
+                // No more await file.arrayBuffer() which consumes 1x file size in main thread memory
                 workerObj.worker.postMessage({ 
                     type: 'process', 
-                    file: fileBuffer, 
+                    file: file, 
                     name: file.name 
-                }, [fileBuffer]);
+                });
             } catch (error) {
                 console.error("WorkerPool: Failed to start task:", error);
                 handleWorkerError(workerObj, 'Task Error', 'Failed to read file for processing.');
