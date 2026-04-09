@@ -7,3 +7,4 @@ LEGAL_AUDIT_REPORT.md
 PERFORMANCE_REPORT.md
 tests/perf_test.js
 node_modules/
+test-results/
