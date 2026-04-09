@@ -25,12 +25,12 @@
 **Requirements:**
 - **REQ-2.1:** Individual File Progress (Worker Pool + Progress events)
 - **REQ-2.2:** Advanced ZIP Options (Post-processing selector + Throttled downloads)
-- **REQ-2.3:** Drag-and-Drop Improvements (View Transitions API + Bento Grid cards)
+- [x] **REQ-2.3:** Drag-and-Drop Improvements (View Transitions API + Bento Grid cards)
 - **REQ-2.4:** Theme Customization (Light/Dark/Aurora/Glass theme implementation)
 
-**Plans:** 4 plans
-- [ ] 02-01-PLAN.md — Worker Pool & Individual Progress
-- [ ] 02-02-PLAN.md — Bento Grid & UI Transitions
+**Plans:** 2/4 plans executed
+- [x] 02-01-PLAN.md — Worker Pool & Individual Progress
+- [x] 02-02-PLAN.md — Bento Grid & UI Transitions
 - [ ] 02-03-PLAN.md — Advanced Downloads & ZIP Options
 - [ ] 02-04-PLAN.md — Theme Customization (4 Themes)
 

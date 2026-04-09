@@ -47,11 +47,18 @@ This protocol defines the verification steps for Phase 04, ensuring that all ext
 
 ---
 
-## 📈 Automated Test Suite
-Run the following command to verify the worker's integration and SRI handling:
+## 📊 Automated Test Suite
+Run the following commands to verify internalization, architectural compliance, and engine integrity:
 
 ```bash
+# Verify architectural compliance (Local paths, CSP, SW cache)
+npm test tests/phase4_compliance.test.js
+
+# Verify engine integration and SRI handling
 npm test tests/pdfWorker.test.js
+
+# E2E Validation (Network Isolation, Offline Mode, Local Processing)
+npx playwright test --reporter=line
 ```
 
 **Required Pass Rate:** 100%
@@ -59,8 +66,8 @@ npm test tests/pdfWorker.test.js
 ---
 
 ## ✅ Final Checklist
-- [ ] `assets/vendor/` contains all necessary files.
-- [ ] `index.html` CSP `script-src` does not contain `unpkg.com`.
-- [ ] `sw.js` `ASSETS_TO_CACHE` includes all local vendor paths.
-- [ ] `services/pdfWorker.js` uses `fetch(wasmUrl, { integrity: sriHash })`.
-- [ ] All tests pass.
+- [x] `assets/vendor/` contains all necessary files (Verified by `phase4_compliance.test.js`).
+- [x] `index.html` CSP `script-src` does not contain `unpkg.com` (Verified by `phase4_compliance.test.js`).
+- [x] `sw.js` `ASSETS_TO_CACHE` includes all local vendor paths (Verified by `phase4_compliance.test.js`).
+- [x] `services/pdfWorker.js` uses `fetch(wasmUrl, { integrity: sriHash })` (Verified by `pdfWorker.test.js`).
+- [x] All tests pass.
