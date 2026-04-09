@@ -27,3 +27,9 @@
 - [x] **DEP-INT-02:** Load WASM and JS assets from local relative paths in workers.
 - [x] **DEP-INT-03:** Pre-cache local vendor assets in Service Worker.
 - [x] **DEP-INT-04:** Maintain SRI (Subresource Integrity) for all internalized assets.
+
+## 💅 UX Polish & Batch Management (Phase 2)
+- [x] **REQ-2.1:** Individual File Progress (Worker Pool + Progress events)
+- [x] **REQ-2.2:** Advanced ZIP Options (Post-processing selector + Throttled downloads)
+- [x] **REQ-2.3:** Drag-and-Drop Improvements (View Transitions API + Bento Grid cards)
+- [x] **REQ-2.4:** Theme Customization (Aurora/Midnight/Frost/Ember theme implementation)
