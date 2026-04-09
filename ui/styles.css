@@ -936,3 +936,159 @@ body.modal-open {
 .processing-pulse.visible {
     display: block;
 }
+
+/* --- Batch Complete Overlay --- */
+.batch-complete-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.batch-complete-overlay .overlay-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 3rem;
+    max-width: 32rem;
+    width: 90%;
+    text-align: center;
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        inset 0 0 0 1px var(--inner-border);
+    transform: scale(1);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { transform: scale(0.9) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.success-icon-large {
+    width: 80px;
+    height: 80px;
+    background: var(--success-bg);
+    color: var(--success-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.success-icon-large svg {
+    width: 48px;
+    height: 48px;
+}
+
+.batch-complete-overlay h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.batch-complete-overlay p {
+    color: var(--subtitle-color);
+    margin-bottom: 2rem;
+}
+
+.batch-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 480px) {
+    .batch-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.primary-btn, .secondary-btn, .text-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid transparent;
+}
+
+.primary-btn {
+    background: var(--accent-color);
+    color: white;
+}
+
+.primary-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.primary-btn:disabled {
+    background: var(--icon-color);
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.secondary-btn {
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    color: var(--text-color);
+}
+
+.secondary-btn:hover {
+    background: var(--card-hover-bg);
+    border-color: var(--card-hover-border);
+    transform: translateY(-2px);
+}
+
+.text-btn {
+    background: transparent;
+    color: var(--subtitle-color);
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    width: auto;
+    display: inline-flex;
+    padding: 0.5rem 1rem;
+}
+
+.text-btn:hover {
+    color: var(--text-color);
+    text-decoration: underline;
+}
+
+.warning-text {
+    color: var(--error-color);
+    font-size: 0.8125rem;
+    margin-bottom: 1rem;
+}
+
+.primary-btn svg, .secondary-btn svg {
+    width: 20px;
+    height: 20px;
+}

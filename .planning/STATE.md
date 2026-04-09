@@ -2,16 +2,17 @@
 
 ## 📍 Current Phase
 - **Phase 2: UX Polish & Batch Enhancements** (In Progress)
-  - Current Plan: Phase 02, Plan 03
+  - Current Plan: Phase 02, Plan 04
 
 ## 📊 Progress
 - **Phase 1:** [==========] 100%
-- **Phase 2:** [=====-----] 50%
+- **Phase 2:** [========--] 75%
 - **Phase 4:** [==========] 100%
-- **Overall:** [=======-----] 70%
+- **Overall:** [========--] 85%
 
 ## 🎯 Active Goals
-- **In Progress:** Implement Advanced Downloads & ZIP Options.
+- **In Progress:** Implement Interactive Tooltips & Final Polish.
+- **Completed:** Implement Advanced Downloads & ZIP Options.
 - **Completed:** Implement Bento Grid & View Transitions.
 - **Completed:** Implement Web Worker architecture with Worker Pool.
 - **Completed:** Optimize WASM loading with streaming and SRI.
@@ -19,6 +20,7 @@
 - **Completed:** Achieve full offline capability via local asset hosting.
 
 ## 📝 Recent Activity
+- **2026-04-10:** Completed Phase 02-03. Implemented Advanced ZIP Options and throttled individual downloads with a dedicated service layer.
 - **2026-04-10:** Completed Phase 02-02. Implemented Bento Grid layout, glassmorphism, and View Transitions for batch processing.
 - **2026-04-10:** Completed Phase 02-01. Implemented WorkerPool for parallel processing and granular status tracking.
 - **2026-04-10:** Phase 2 Plans Verified. All implementation plans (02-01 to 02-04) have been revised.
@@ -34,8 +36,7 @@
 - **Done:** Phase 2 Planning Blockers (Architecture & Testing addressed in revision).
 
 ## 🔮 Next Steps
-1. Execute Phase 2, Wave 1: Worker Pool & Individual Progress (02-01-PLAN.md).
-2. Implement Bento Grid & View Transitions.
+1. Execute Phase 2, Plan 04: Interactive Tooltips & Final Polish.
 
 ## 📊 Performance Metrics
 | Phase | Plan | Duration | Tasks | Files |
@@ -45,10 +46,13 @@
 | 1     | 03   | 12m      | 3     | 3     |
 | 1     | 04   | 10m      | 3     | 3     |
 | 4     | 04   | 25m      | 3     | 6     |
+| 2     | 01   | 15m      | 3     | 3     |
+| 2     | 02   | 12m      | 3     | 2     |
+| 2     | 03   | 15m      | 4     | 5     |
 
 ## 👤 Session Info
-- **Last session:** 2026-04-09
-- **Stopped at:** Completed 04-PLAN.md (Internalize Engine Dependencies)
+- **Last session:** 2026-04-10
+- **Stopped at:** Completed Phase 02, Plan 03 (Advanced ZIP Options)
 
 ## 📦 Accumulated Context
 ### 🔄 Roadmap Evolution
@@ -56,4 +60,5 @@
 - **Phase 4 Completed:** All engine assets now local; network reliance on unpkg.com removed.
 
 ## 💡 Decisions Made
+- **2026-04-10:** Implemented `batchService.js` to decouple batch logic from the UI.
 - **2026-04-09:** Internalized all engine dependencies (JSZip, QPDF) to local assets and enforced local-only execution via CSP.

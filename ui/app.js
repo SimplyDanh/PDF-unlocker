@@ -159,13 +159,10 @@ function updateCardStatus(file, state, text) {
 const MAX_BATCH_FILES = 20;
 let fileQueue = [];
 let isQueueRunning = false;
-let currentBatchZip = null;
+let currentBatchFiles = []; // Stores {blob, name}
 let currentBatchTotal = 0;
 let currentBatchProcessed = 0;
 let currentBatchSuccessful = 0;
-
-const ZIP_MEMORY_LIMIT_MB = 150;
-const ZIP_MEMORY_LIMIT_BYTES = ZIP_MEMORY_LIMIT_MB * 1024 * 1024;
 
 // --- Queue Manager ---
 async function processQueue() {
@@ -175,15 +172,10 @@ async function processQueue() {
     currentBatchTotal = fileQueue.length;
     currentBatchProcessed = 0;
     currentBatchSuccessful = 0;
+    currentBatchFiles = [];
 
     // Render/Update grid with all files in queue
     renderBentoGrid(fileQueue);
-
-    // Calculate total size to determine if we can safely zip in RAM
-    const totalBatchSize = fileQueue.reduce((acc, f) => acc + f.size, 0);
-    const useZip = (totalBatchSize < ZIP_MEMORY_LIMIT_BYTES) && (currentBatchTotal > 1);
-
-    currentBatchZip = useZip ? new JSZip() : null;
 
     const filesToProcess = [...fileQueue];
     fileQueue = [];
@@ -226,51 +218,104 @@ function handleProcessedFile(blob, originalName) {
     const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
     const newFilename = `${nameWithoutExt}_unlocked.pdf`;
 
-    if (currentBatchZip) {
-        currentBatchZip.file(newFilename, blob);
-    } else {
-        // Individual auto-download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = newFilename;
-        document.body.appendChild(a);
-        a.click();
+    currentBatchFiles.push({ blob, name: newFilename });
+}
+
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        if (currentBatchTotal === 1) {
-            updateStatus('success', 'Success! Downloading...', `${newFilename} is ready.`);
-        }
-    }
+    }, 100);
+}
+
+function showBatchOverlay() {
+    const overlay = document.getElementById('batch-complete-overlay');
+    const summaryText = document.getElementById('batch-summary-text');
+    const zipBtn = document.getElementById('download-zip-btn');
+    const zipWarning = document.getElementById('zip-warning');
+    
+    summaryText.textContent = `${currentBatchSuccessful} of ${currentBatchTotal} files successfully unlocked.`;
+    
+    // Check size limit for ZIP
+    const totalSize = currentBatchFiles.reduce((acc, f) => acc + f.blob.size, 0);
+    const isTooLarge = totalSize > batchService.MAX_ZIP_SIZE_BYTES;
+    
+    zipBtn.disabled = isTooLarge;
+    zipWarning.classList.toggle('hidden', !isTooLarge);
+    
+    overlay.classList.remove('hidden');
+    updateStatus('success', 'Batch Complete', 'Select your download preference.');
+}
+
+function hideBatchOverlay() {
+    document.getElementById('batch-complete-overlay').classList.add('hidden');
 }
 
 async function finalizeBatch() {
-    if (currentBatchZip && currentBatchSuccessful > 0) {
-        updateStatus('processing', 'Compressing files...', 'Building your ZIP archive securely in memory.');
-        try {
-            const zipBlob = await currentBatchZip.generateAsync({ type: "blob" });
-            const url = URL.createObjectURL(zipBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Unlocked_PDFs.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            updateStatus('success', 'Success! Downloading ZIP...', 'All documents preserved and unlocked.');
-        } catch (error) {
-            console.error("ZIP Generation error:", error);
-            updateStatus('error', 'ZIP Failed', 'Failed to compress files due to browser memory limits.');
+    isQueueRunning = false;
+    
+    if (currentBatchFiles.length === 0) {
+        if (currentBatchTotal > 0) {
+             updateStatus('error', 'Batch Failed', 'Could not unlock any documents.');
         }
-    } else if (currentBatchTotal > 1 && currentBatchSuccessful === 0) {
-        updateStatus('error', 'Batch Failed', 'Could not unlock any of the provided documents.');
+        resetState();
+        return;
     }
 
-    isQueueRunning = false;
-    currentBatchZip = null;
-    resetState();
+    if (currentBatchFiles.length === 1) {
+        // For single file, just download immediately
+        const file = currentBatchFiles[0];
+        triggerDownload(file.blob, file.name);
+        updateStatus('success', 'Success!', `${file.name} is ready.`);
+        currentBatchFiles = [];
+        resetState();
+    } else {
+        // Show batch complete overlay for multiple files
+        showBatchOverlay();
+    }
 }
+
+// --- Overlay Event Listeners ---
+document.getElementById('download-zip-btn').addEventListener('click', async () => {
+    try {
+        updateStatus('processing', 'Creating ZIP...', 'Packaging your files securely.');
+        const zipBlob = await batchService.packageAsZip(currentBatchFiles);
+        triggerDownload(zipBlob, 'Unlocked_PDFs.zip');
+        hideBatchOverlay();
+        currentBatchFiles = [];
+        updateStatus('success', 'Downloaded!', 'Your ZIP archive is ready.');
+        resetState();
+    } catch (err) {
+        console.error("ZIP Generation failed:", err);
+        updateStatus('error', 'ZIP Error', err.message);
+    }
+});
+
+document.getElementById('download-individual-btn').addEventListener('click', async () => {
+    hideBatchOverlay();
+    updateStatus('processing', 'Downloading...', 'Delivering files individually.');
+    await batchService.processIndividually(currentBatchFiles, (file) => {
+        triggerDownload(file.blob, file.name);
+    });
+    currentBatchFiles = [];
+    updateStatus('success', 'Complete!', 'All files have been downloaded.');
+    resetState();
+});
+
+document.getElementById('reset-batch-btn').addEventListener('click', () => {
+    hideBatchOverlay();
+    currentBatchFiles = [];
+    bentoGrid.innerHTML = '';
+    bentoGrid.classList.add('hidden');
+    dropZone.classList.remove('compact');
+    updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
+});
 
 // --- Interaction Logic ---
 function preventDefaults(e) {

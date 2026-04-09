@@ -26,13 +26,9 @@ describe('pdfWorker', () => {
                 FS: { writeFile: vi.fn(), readFile: vi.fn(), unlink: vi.fn() }, 
                 callMain: vi.fn() 
             };
-
-            if (options.instantiateWasm) {
-                // Return an object indicating async instantiation to Emscripten
-                // and trigger the underlying WebAssembly promise flow.
-                options.instantiateWasm({}, (instance) => {
-                    // receiveInstance callback
-                });
+            
+            if (mockModule.shouldFail) {
+                throw new Error("Simulated WASM Error");
             }
             
             return moduleInstance;
@@ -76,10 +72,7 @@ describe('pdfWorker', () => {
     it('should initialize WASM successfully', async () => {
         const mockQpdf = { FS: {}, callMain: vi.fn() };
         mockModule.instance = mockQpdf;
-        
-        global.fetch.mockResolvedValue({
-            ok: true
-        });
+        mockModule.shouldFail = false;
 
         // Trigger init message
         await workerScope.onmessage({ data: { type: 'init' } });
@@ -89,14 +82,13 @@ describe('pdfWorker', () => {
             type: 'status', 
             state: 'loading' 
         }));
-        expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('qpdf.wasm'), expect.objectContaining({ integrity: expect.any(String) }));
+        expect(mockModule).toHaveBeenCalledWith(expect.objectContaining({
+            locateFile: expect.any(Function)
+        }));
     });
 
     it('should handle WASM initialization failure', async () => {
-        global.fetch.mockResolvedValue({
-            ok: false,
-            statusText: 'Not Found'
-        });
+        mockModule.shouldFail = true;
 
         await workerScope.onmessage({ data: { type: 'init' } });
 

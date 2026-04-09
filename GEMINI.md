@@ -38,6 +38,7 @@ The project follows a strict separation between the presentation and business lo
 | Command | Description |
 | :--- | :--- |
 | `npm test` | Runs the Vitest suite (unit and integration tests). |
+| `npx playwright test --reporter=line` | Runs E2E tests with line reporting. |
 | `npm run lint` | *(TODO: Add ESLint/Prettier script)* |
 | `npm run build` | *(N/A: This is a buildless vanilla project)* |
 
@@ -51,7 +52,11 @@ The project follows a strict separation between the presentation and business lo
     - **Revealing Module Pattern (IIFE):** Used in `pdfService.js` to encapsulate private state.
     - **Callback-based Updates:** Services communicate status back to the UI via `onStatus` callbacks.
     - **Security:** Strict Content Security Policy (CSP) and Subresource Integrity (SRI) for external dependencies.
-- **Testing:** New features or bug fixes should include corresponding tests in the `tests/` directory.
+- **Testing:** 
+    - **Unit/Integration:** Use Vitest for business logic and worker-proxy testing.
+    - **E2E/Validation:** Use Playwright for browser-level validation and network checks.
+    - **Reporting:** Always use `--reporter=line` for Playwright to provide clear, sequential feedback.
+    - New features or bug fixes should include corresponding tests in the `tests/` directory.
 
 ## 📂 Directory Structure
 ```text
