@@ -1,4 +1,10 @@
 :root {
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Aurora (Default/Light) */
+:root, [data-theme="aurora"] {
     --bg-color: #f8fafc;
     --text-color: #0f172a;
     --accent-color: #2563eb;
@@ -25,12 +31,10 @@
     --shield-bg: rgba(255, 255, 255, 0.7);
     --shield-border: rgba(255, 255, 255, 0.8);
     --shimmer-color: rgba(255, 255, 255, 0.8);
-
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-[data-theme="dark"] {
+/* Midnight (Deep Dark) */
+[data-theme="midnight"], [data-theme="dark"] {
     --bg-color: #0f172a;
     --text-color: #f8fafc;
     --accent-color: #3b82f6;
@@ -57,6 +61,66 @@
     --shield-bg: rgba(30, 41, 59, 0.7);
     --shield-border: rgba(51, 65, 85, 0.8);
     --shimmer-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Frost (Icy Light) */
+[data-theme="frost"] {
+    --bg-color: #f0f9ff;
+    --text-color: #0c4a6e;
+    --accent-color: #0ea5e9;
+    --accent-hover: #0284c7;
+    --success-color: #059669;
+    --success-bg: #f0fdf4;
+    --error-color: #e11d48;
+    --error-bg: #fff1f2;
+    --subtitle-color: #075985;
+    --icon-color: #38bdf8;
+
+    --mesh-1: hsla(199, 89%, 88%, 1);
+    --mesh-2: hsla(200, 100%, 95%, 1);
+    --mesh-3: hsla(190, 80%, 90%, 1);
+    --mesh-4: hsla(204, 94%, 94%, 1);
+    --mesh-5: hsla(186, 100%, 97%, 1);
+
+    --card-bg: rgba(255, 255, 255, 0.5);
+    --card-border: rgba(186, 230, 253, 0.6);
+    --card-hover-bg: rgba(255, 255, 255, 0.75);
+    --card-hover-border: #7dd3fc;
+    --inner-border: rgba(255, 255, 255, 0.8);
+    --inner-border-hover: rgba(255, 255, 255, 1);
+    --shield-bg: rgba(255, 255, 255, 0.6);
+    --shield-border: rgba(186, 230, 253, 0.6);
+    --shimmer-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Ember (Warm Dark) */
+[data-theme="ember"] {
+    --bg-color: #0c0a09;
+    --text-color: #fafaf9;
+    --accent-color: #f97316;
+    --accent-hover: #ea580c;
+    --success-color: #10b981;
+    --success-bg: rgba(16, 185, 129, 0.1);
+    --error-color: #f43f5e;
+    --error-bg: rgba(244, 63, 94, 0.1);
+    --subtitle-color: #a8a29e;
+    --icon-color: #d6d3d1;
+
+    --mesh-1: hsla(20, 40%, 10%, 1);
+    --mesh-2: hsla(10, 50%, 8%, 1);
+    --mesh-3: hsla(30, 30%, 12%, 1);
+    --mesh-4: hsla(0, 40%, 9%, 1);
+    --mesh-5: hsla(25, 45%, 11%, 1);
+
+    --card-bg: rgba(28, 25, 23, 0.7);
+    --card-border: rgba(68, 64, 60, 0.8);
+    --card-hover-bg: rgba(28, 25, 23, 0.85);
+    --card-hover-border: #f97316;
+    --inner-border: rgba(255, 255, 255, 0.03);
+    --inner-border-hover: rgba(255, 255, 255, 0.08);
+    --shield-bg: rgba(28, 25, 23, 0.7);
+    --shield-border: rgba(68, 64, 60, 0.8);
+    --shimmer-color: rgba(255, 255, 255, 0.05);
 }
 
 * {
