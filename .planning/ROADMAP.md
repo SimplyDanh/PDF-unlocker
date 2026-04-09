@@ -2,9 +2,9 @@
 
 ## 🚦 Status Summary
 - **Phase 1 (Optimization):** ✅ COMPLETED
-- **Phase 2 (UX Polish):** ⏳ Upcoming
-- **Phase 4 (Self-Containment):** 🛠️ Planned
-- **Phase 3 (Enterprise):** ⏳ Backlog
+- **Phase 2 (UX Polish):** 🛠️ Planned
+- **Phase 4 (Self-Containment):** ✅ COMPLETED
+- **Phase 3 (Enterprise):** ⏳ Upcoming
 
 ---
 
@@ -17,47 +17,30 @@
 - [x] 01-04-PLAN.md — Performance Benchmarking & Integration
 - [x] 01-05-PLAN.md — Main Thread Proxy & UI Integration
 
-### ✅ Tasks
-- [x] **1.1 Web Worker Infrastructure**
-- [x] **1.2 Streaming WASM Loading**
-- [x] **1.3 UI State Management**
-- [x] **1.4 Service Worker Cache Strategy**
-- [x] **1.5 Performance Benchmarking**
-- [x] **1.6 Main Thread Proxy & UI Integration**
-
-### 🏁 Success Criteria
-- Engine initializes < 500ms on repeat visits (cached).
-- Drop zone displays "Loading engine..." if initialization takes > 100ms.
-- Main UI remains responsive (60fps) during heavy PDF decryption tasks.
-
 ---
 
-## Phase 2: UX Polish & Batch Management ⏳
+## Phase 2: UX Polish & Batch Management 🛠️
 *Goal: Provide enterprise-level feedback for batch processing.*
 
-### ✅ Tasks
-- [ ] **2.1 Individual File Progress**
-- [ ] **2.2 Advanced ZIP Options**
-- [ ] **2.3 Drag-and-Drop Improvements**
-- [ ] **2.4 Theme Customization**
+**Requirements:**
+- **REQ-2.1:** Individual File Progress (Worker Pool + Progress events)
+- **REQ-2.2:** Advanced ZIP Options (Post-processing selector + Throttled downloads)
+- **REQ-2.3:** Drag-and-Drop Improvements (View Transitions API + Bento Grid cards)
+- **REQ-2.4:** Theme Customization (Light/Dark/Aurora/Glass theme implementation)
+
+**Plans:** 4 plans
+- [ ] 02-01-PLAN.md — Worker Pool & Individual Progress
+- [ ] 02-02-PLAN.md — Bento Grid & UI Transitions
+- [ ] 02-03-PLAN.md — Advanced Downloads & ZIP Options
+- [ ] 02-04-PLAN.md — Theme Customization (4 Themes)
 
 ---
 
-## Phase 4: Internalize Engine Dependencies 🛠️
-**Goal:** Move external WASM/JS dependencies from CDNs to local assets to make the project fully self-contained and offline-capable without external network requests.
+## Phase 4: Internalize Engine Dependencies ✅
+**Goal:** Move external WASM/JS dependencies from CDNs to local assets to make the project fully self-contained.
 
-**Requirements:**
-- **DEP-INT-01:** Host `qpdf.wasm` and `qpdf.js` locally in `assets/vendor/`.
-- **DEP-INT-02:** Update `pdfWorker.js` to load from local paths.
-- **DEP-INT-03:** Update Service Worker (`sw.js`) to cache local vendor assets.
-- **DEP-INT-04:** Maintain SRI (Subresource Integrity) for local assets.
-
-**Depends on:** Phase 1
-**Plans:** 1/1 plans complete
-
-Plans:
-- [ ] 04-PLAN.md — Internalize Engine Dependencies
-- [ ] 04-VALIDATION.md — Validation Protocol for Internalized Dependencies
+- [x] 04-PLAN.md — Internalize Engine Dependencies
+- [x] 04-VALIDATION.md — Validation Protocol for Internalized Dependencies
 
 ---
 
