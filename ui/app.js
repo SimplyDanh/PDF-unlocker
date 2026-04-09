@@ -4,7 +4,7 @@
  * Depends on: pdfService.js (loaded first via classic script tag).
  */
 
-/* global pdfService */
+/* global pdfService, JSZip */
 
 // --- DOM References ---
 const dropZone = document.getElementById('drop-zone');
@@ -15,55 +15,17 @@ const statusIcon = document.getElementById('status-icon');
 const spinner = document.getElementById('spinner');
 
 // --- Worker & Engine State ---
-let pdfWorker = null;
 let isEngineReady = false;
 
-function initEngine() {
+async function initEngine() {
     updateStatus('loading', 'Loading engine...', 'Preparing local environment');
     
     try {
-        pdfWorker = new Worker('services/pdfWorker.js');
-        
-        pdfWorker.onmessage = (e) => {
-            const { type, state, main, sub, blob, name } = e.data;
-            
-            switch (type) {
-                case 'ready':
-                    isEngineReady = true;
-                    updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
-                    break;
-                    
-                case 'status':
-                    // Map worker status to UI updates
-                    updateStatus(state, main, sub);
-                    break;
-                    
-                case 'success':
-                    handleWorkerSuccess(blob, name);
-                    break;
-                    
-                case 'error':
-                    if (!isEngineReady) {
-                        updateStatus('error', 'Engine Initialization Failed', sub);
-                    } else {
-                        updateStatus('error', main, sub);
-                    }
-                    isEngineReady = false; // Block interaction on fatal error
-                    break;
-            }
-        };
-
-        pdfWorker.onerror = (err) => {
-            console.error("Worker Error:", err);
-            isEngineReady = false;
-            updateStatus('error', 'Engine Error', 'Failed to start background processor. Please reload.');
-        };
-
-        // Trigger worker initialization
-        pdfWorker.postMessage({ type: 'init' });
-
+        await pdfService.initWasm();
+        isEngineReady = true;
+        updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
     } catch (err) {
-        console.error("Worker initialization failed:", err);
+        console.error("Engine initialization failed:", err);
         isEngineReady = false;
         updateStatus('error', 'Browser Restricted', 'Your browser does not support background processing (WebWorkers).');
     }
@@ -165,47 +127,43 @@ async function processQueue() {
 
     currentBatchZip = useZip ? new JSZip() : null;
 
-    nextInQueue();
+    const filesToProcess = [...fileQueue];
+    fileQueue = [];
+
+    const processingPromises = filesToProcess.map(async (file) => {
+        const callbacks = {
+            onStatus: (state, main, sub) => {
+                // Update global status with current file info
+                // This is a placeholder until Phase 02-02 (Bento Grid)
+                if (isQueueRunning) {
+                    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, `${file.name}: ${main}`);
+                }
+            }
+        };
+
+        try {
+            const resultBlob = await pdfService.WorkerPool.enqueue(file, callbacks, { returnBlob: true });
+            currentBatchProcessed++;
+            if (resultBlob) {
+                currentBatchSuccessful++;
+                handleProcessedFile(resultBlob, file.name);
+            }
+        } catch (error) {
+            currentBatchProcessed++;
+            console.error(`Queue: Failed to process ${file.name}:`, error);
+        }
+    });
+
+    await Promise.all(processingPromises);
+    finalizeBatch();
 }
 
-function nextInQueue() {
-    if (fileQueue.length === 0) {
-        finalizeBatch();
-        return;
-    }
-
-    const currentFile = fileQueue.shift();
-    currentBatchProcessed++;
-
-    // Update UI to show progress
-    updateStatus('processing', `Unlocking (${currentBatchProcessed}/${currentBatchTotal})...`, `Processing: ${currentFile.name}`);
-
-    // Read file as ArrayBuffer for the worker
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const buffer = e.target.result;
-        pdfWorker.postMessage({ 
-            type: 'process', 
-            file: buffer, 
-            name: currentFile.name 
-        }, [buffer]); // Transfer buffer for performance
-    };
-    reader.onerror = () => {
-        updateStatus('error', 'Read Error', `Failed to read ${currentFile.name}`);
-        nextInQueue();
-    };
-    reader.readAsArrayBuffer(currentFile);
-}
-
-function handleWorkerSuccess(buffer, originalName) {
-    currentBatchSuccessful++;
-    const blob = new Blob([buffer], { type: "application/pdf" });
+function handleProcessedFile(blob, originalName) {
     const nameWithoutExt = originalName.toLowerCase().endsWith('.pdf') ? originalName.slice(0, -4) : originalName;
     const newFilename = `${nameWithoutExt}_unlocked.pdf`;
 
     if (currentBatchZip) {
         currentBatchZip.file(newFilename, blob);
-        nextInQueue();
     } else {
         // Individual auto-download
         const url = URL.createObjectURL(blob);
@@ -219,9 +177,6 @@ function handleWorkerSuccess(buffer, originalName) {
         
         if (currentBatchTotal === 1) {
             updateStatus('success', 'Success! Downloading...', `${newFilename} is ready.`);
-            finalizeBatch();
-        } else {
-            nextInQueue();
         }
     }
 }
@@ -244,6 +199,8 @@ async function finalizeBatch() {
             console.error("ZIP Generation error:", error);
             updateStatus('error', 'ZIP Failed', 'Failed to compress files due to browser memory limits.');
         }
+    } else if (currentBatchTotal > 1 && currentBatchSuccessful === 0) {
+        updateStatus('error', 'Batch Failed', 'Could not unlock any of the provided documents.');
     }
 
     isQueueRunning = false;
