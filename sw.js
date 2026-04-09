@@ -6,9 +6,9 @@ const ASSETS_TO_CACHE = [
     './ui/app.js',
     './services/pdfService.js',
     './favicon.svg',
-    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
-    'https://unpkg.com/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.js',
-    'https://unpkg.com/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.wasm',
+    './assets/vendor/jszip.min.js',
+    './assets/vendor/qpdf/qpdf.js',
+    './assets/vendor/qpdf/qpdf.wasm',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap'
 ];
 
@@ -42,10 +42,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Task 3: Cache-First for versioned dependencies (e.g., unpkg.com with version tags)
-    const isVersionedDependency = url.hostname === 'unpkg.com' && /@\d+\.\d+\.\d+/.test(url.pathname);
+    // Cache-First for local vendor assets (highly stable)
+    const isVendorAsset = url.pathname.includes('/assets/vendor/');
 
-    if (isVersionedDependency) {
+    if (isVendorAsset) {
         event.respondWith(
             caches.match(event.request).then((cachedResponse) => {
                 if (cachedResponse) {
