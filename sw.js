@@ -45,9 +45,29 @@ self.addEventListener('message', (event) => {
     }
 });
 
+// Function to add COOP/COEP headers for Cross-Origin Isolation
+function addCOIHeaders(response) {
+    if (!response || response.type === 'opaque') {
+        return response;
+    }
+
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
+    newHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+    });
+}
+
 // Fetch Event - Optimized Cache Strategy
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
+
+    // Only intercept GET requests
+    if (event.request.method !== 'GET') return;
 
     // Cache-First for local vendor assets (highly stable)
     const isVendorAsset = url.pathname.includes('/assets/vendor/');
@@ -56,12 +76,12 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.match(event.request).then((cachedResponse) => {
                 if (cachedResponse) {
-                    return cachedResponse;
+                    return addCOIHeaders(cachedResponse);
                 }
                 return fetch(event.request).then((networkResponse) => {
                     return caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
+                        return addCOIHeaders(networkResponse);
                     });
                 });
             })
@@ -77,10 +97,10 @@ self.addEventListener('fetch', (event) => {
                         cache.put(event.request, responseClone);
                     });
                 }
-                return networkResponse;
+                return addCOIHeaders(networkResponse);
             }).catch(() => {
                 // Network unavailable — serve from cache (offline mode)
-                return caches.match(event.request);
+                return caches.match(event.request).then(response => addCOIHeaders(response));
             })
         );
     }

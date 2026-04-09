@@ -29,6 +29,13 @@ test.describe('PWA & UI Verification', () => {
         const html = page.locator('html');
         await expect(html).toHaveAttribute('data-theme', 'aurora');
     });
+
+    test('should be cross-origin isolated via Service Worker injection', async ({ page }) => {
+        // Wait for potential reloads and SW activation
+        await page.waitForFunction(() => window.crossOriginIsolated === true, { timeout: 10000 });
+        const isIsolated = await page.evaluate(() => window.crossOriginIsolated);
+        expect(isIsolated).toBe(true);
+    });
 });
 
 test.describe('Connectivity & Updates UI', () => {

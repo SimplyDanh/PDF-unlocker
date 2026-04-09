@@ -9,6 +9,8 @@ test.describe('Phase 4: Engine Internalization & Offline Capability', () => {
             const registration = await navigator.serviceWorker.register('sw.js');
             await navigator.serviceWorker.ready;
         });
+        // Wait for Cross-Origin Isolation to be active (may involve an auto-reload)
+        await page.waitForFunction(() => window.crossOriginIsolated === true, { timeout: 10000 });
     });
 
     test('should not make any external network requests to unpkg.com', async ({ page }) => {
@@ -32,6 +34,9 @@ test.describe('Phase 4: Engine Internalization & Offline Capability', () => {
         });
 
         await page.reload();
+        // Wait for engine to initialize (which triggers qpdf.js load)
+        await expect(page.locator('#status-text')).toHaveText('Awaiting Document');
+        
         const vendorPaths = vendorRequests.map(url => new URL(url).pathname);
         expect(vendorPaths).toContain('/assets/vendor/jszip.min.js');
         expect(vendorPaths).toContain('/assets/vendor/qpdf/qpdf.js');
@@ -57,6 +62,26 @@ test.describe('Phase 4: Engine Internalization & Offline Capability', () => {
         
         // 5. Cleanup
         await context.setOffline(false);
+    });
+
+    test('should have COOP and COEP headers injected by Service Worker', async ({ page }) => {
+        await page.goto('http://localhost:3000');
+        
+        // Ensure SW is active
+        await page.evaluate(async () => {
+            await navigator.serviceWorker.register('sw.js');
+            await navigator.serviceWorker.ready;
+        });
+
+        // Reload to trigger SW fetch interception
+        const [response] = await Promise.all([
+            page.waitForResponse(resp => resp.url() === 'http://localhost:3000/' || resp.url().includes('index.html')),
+            page.reload()
+        ]);
+
+        const headers = response.headers();
+        expect(headers['cross-origin-embedder-policy']).toBe('require-corp');
+        expect(headers['cross-origin-opener-policy']).toBe('same-origin');
     });
 
     test('should attempt to process a PDF locally', async ({ page }) => {
