@@ -48,13 +48,16 @@ describe('pdfWorker', () => {
         vi.stubGlobal('importScripts', mockImportScripts);
         
         // Mock global fetch
-        const mockFetch = vi.fn();
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10))
+        });
         vi.stubGlobal('fetch', mockFetch);
 
         // Mock WebAssembly
         const mockWebAssembly = {
             instantiateStreaming: vi.fn().mockResolvedValue({ instance: { exports: {} } }),
-            instantiate: vi.fn()
+            instantiate: vi.fn().mockResolvedValue({ instance: { exports: {} } })
         };
         vi.stubGlobal('WebAssembly', mockWebAssembly);
 

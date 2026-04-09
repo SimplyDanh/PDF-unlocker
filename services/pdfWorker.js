@@ -28,8 +28,31 @@ async function initWasm() {
             sub: 'Loading WebAssembly core...' 
         });
 
+        // DEP-INT-04: Subresource Integrity (SRI) validation for local WASM binary
+        const wasmUrl = '../assets/vendor/qpdf/qpdf.wasm';
+        const wasmSri = 'sha384-9ESKDLiqwqZ9ln5RdWhoE5TM/zLYG2UoW/AMa0KeND/fhDO5ZJsRH6FTJ3Dera+p';
+
         qpdfModule = await Module({
             locateFile: (path) => `../assets/vendor/qpdf/${path}`,
+            instantiateWasm: (info, receiveInstance) => {
+                // Manual fetch with SRI to ensure binary has not been tampered with
+                fetch(wasmUrl, { integrity: wasmSri })
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        return response.arrayBuffer();
+                    })
+                    .then(buffer => WebAssembly.instantiate(buffer, info))
+                    .then(result => receiveInstance(result.instance))
+                    .catch(error => {
+                        console.error("Worker: SRI Validation or WASM instantiation failed:", error);
+                        self.postMessage({ 
+                            type: 'error', 
+                            main: 'Security Error', 
+                            sub: 'The PDF engine failed integrity validation and was blocked.' 
+                        });
+                    });
+                return {}; // instantiateWasm is asynchronous
+            },
             print: (text) => console.log('Worker stdout:', text),
             printErr: (text) => console.error('Worker stderr:', text)
         });
