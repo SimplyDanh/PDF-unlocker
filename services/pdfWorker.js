@@ -49,29 +49,33 @@ async function initWasm() {
 }
 
 /**
- * Process a PDF file using MEMFS in-memory processing.
- * @param {ArrayBuffer} fileBuffer - The input PDF data.
- * @param {string} fileName - Original filename.
+ * Process a PDF file using WorkerFS zero-copy mounting.
+ * @param {File|Blob} file - The input PDF file.
+ * @param {string} fileName - Original filename for display.
  */
-async function processFile(fileBuffer, fileName) {
+async function processFile(file, fileName) {
     if (!qpdfModule) {
         await initWasm();
     }
+
+    const mountPoint = '/mnt';
+    let isMounted = false;
 
     try {
         self.postMessage({ 
             type: 'status', 
             state: 'processing', 
             main: 'Unlocking locally...', 
-            sub: 'Parsing structure and removing restrictions securely.' 
+            sub: 'Accessing file via WorkerFS zero-copy mounting.' 
         });
 
-        const uint8Array = new Uint8Array(fileBuffer);
-
-        // Magic-byte validation: PDF files must start with %PDF
-        if (uint8Array.length < 4 ||
-            uint8Array[0] !== 0x25 || uint8Array[1] !== 0x50 ||
-            uint8Array[2] !== 0x44 || uint8Array[3] !== 0x46) {
+        // Magic-byte validation using minimal memory (only 4 bytes)
+        const headerBuffer = await file.slice(0, 4).arrayBuffer();
+        const header = new Uint8Array(headerBuffer);
+        
+        if (header.length < 4 ||
+            header[0] !== 0x25 || header[1] !== 0x50 ||
+            header[2] !== 0x44 || header[3] !== 0x46) {
             self.postMessage({ 
                 type: 'error', 
                 main: 'Invalid PDF', 
@@ -80,54 +84,44 @@ async function processFile(fileBuffer, fileName) {
             return;
         }
 
-        const inputName = `input_${Date.now()}.pdf`;
+        // Create mount point if it doesn't exist
+        try {
+            qpdfModule.FS.mkdir(mountPoint);
+        } catch (e) {
+            // Directory might already exist (code 17 is EEXIST)
+            if (e.errno !== 17) console.warn('Worker: FS.mkdir error:', e);
+        }
+
+        // Mount the file via WorkerFS. This provides a virtual file in the WASM FS
+        // that points directly to the browser's File handle, avoiding a memory copy.
+        qpdfModule.FS.mount(qpdfModule.WORKERFS, { files: [file] }, mountPoint);
+        isMounted = true;
+
+        // Path inside WorkerFS is simply the name of the file object
+        const inputPath = `${mountPoint}/${file.name}`;
         const outputName = `output_${Date.now()}.pdf`;
 
         self.postMessage({ 
             type: 'status', 
             state: 'processing', 
-            main: 'Preparing...', 
-            sub: 'Setting up secure in-memory workspace.' 
-        });
-
-        // Task 2: Implement MEMFS In-Memory Processing (SEC-3)
-        // Mounting ArrayBuffer directly into MEMFS
-        qpdfModule.FS.writeFile(inputName, uint8Array);
-        
-        // Zero the source buffer after writing to WASM FS (Security: SEC-3)
-        uint8Array.fill(0);
-
-        self.postMessage({ 
-            type: 'status', 
-            state: 'processing', 
-            main: 'Unlocking...', 
-            sub: 'Decrypting PDF structure via QPDF core.' 
+            main: 'Decrypting...', 
+            sub: 'Removing restrictions securely via QPDF core.' 
         });
 
         // Execute QPDF decryption
-        qpdfModule.callMain(["--decrypt", inputName, outputName]);
+        qpdfModule.callMain(["--decrypt", inputPath, outputName]);
         
         self.postMessage({ 
             type: 'status', 
             state: 'processing', 
             main: 'Finalizing...', 
-            sub: 'Cleaning up and preparing output.' 
+            sub: 'Preparing output.' 
         });
 
-        // Read the result directly from MEMFS
+        // Read the result from MEMFS (output is in MEMFS)
         const outputFile = qpdfModule.FS.readFile(outputName);
         
-        // Cleanup MEMFS immediately to free memory
-        try {
-            qpdfModule.FS.unlink(inputName);
-            qpdfModule.FS.unlink(outputName);
-        } catch (e) {
-            console.warn('Worker: FS cleanup failed:', e);
-        }
-
-        // Send back the processed file using Transferable Objects for zero-copy
-        // We need a NEW ArrayBuffer to transfer, readFile returns a Uint8Array view 
-        // that might be part of the WASM heap.
+        // Send back the processed file using Transferable Objects
         const outputBuffer = new Uint8Array(outputFile).buffer;
         
         self.postMessage({ 
@@ -136,6 +130,13 @@ async function processFile(fileBuffer, fileName) {
             name: fileName 
         }, [outputBuffer]);
 
+        // Cleanup output from MEMFS immediately
+        try {
+            qpdfModule.FS.unlink(outputName);
+        } catch (e) {
+            console.warn('Worker: Failed to unlink output file:', e);
+        }
+
     } catch (error) {
         console.error("Worker: PDF Processing error:", error);
         self.postMessage({ 
@@ -143,6 +144,15 @@ async function processFile(fileBuffer, fileName) {
             main: 'Processing Failed', 
             sub: 'The document appears to be corrupted or too heavily encrypted.' 
         });
+    } finally {
+        // Ensure we always unmount to free up the mount point and file handle
+        if (isMounted) {
+            try {
+                qpdfModule.FS.unmount(mountPoint);
+            } catch (e) {
+                console.warn('Worker: Failed to unmount WorkerFS:', e);
+            }
+        }
     }
 }
 
@@ -157,7 +167,7 @@ self.onmessage = async (e) => {
             await initWasm();
             break;
         case 'process':
-            // file is expected to be an ArrayBuffer
+            // file is now a File/Blob object (from Task 1 refactor)
             await processFile(file, name);
             break;
         default:

@@ -23,7 +23,15 @@ describe('pdfWorker', () => {
         // Mock global Module for Emscripten
         mockModule = vi.fn().mockImplementation(async (options) => {
             const moduleInstance = mockModule.instance || { 
-                FS: { writeFile: vi.fn(), readFile: vi.fn(), unlink: vi.fn() }, 
+                FS: { 
+                    writeFile: vi.fn(), 
+                    readFile: vi.fn(), 
+                    unlink: vi.fn(),
+                    mkdir: vi.fn(),
+                    mount: vi.fn(),
+                    unmount: vi.fn()
+                }, 
+                WORKERFS: {},
                 callMain: vi.fn() 
             };
             
@@ -52,6 +60,15 @@ describe('pdfWorker', () => {
 
         // Mock navigator
         vi.stubGlobal('navigator', { onLine: true });
+
+        // Mock Blob for test environment if needed
+        if (typeof global.Blob === 'undefined') {
+            global.Blob = class {
+                constructor(content) { this.content = content; this.size = content[0].length; }
+                slice() { return new global.Blob(this.content); }
+                async arrayBuffer() { return this.content[0].buffer; }
+            };
+        }
 
         workerScope = {
             postMessage: postMessage,
@@ -99,13 +116,13 @@ describe('pdfWorker', () => {
     });
 
     it('should reject non-PDF files via magic byte validation', async () => {
-        global.fetch.mockResolvedValue({ ok: true });
-        const invalidPdfContent = new Uint8Array([0, 1, 2, 3]).buffer;
+        const invalidPdfContent = new Uint8Array([0, 1, 2, 3]);
+        const file = new Blob([invalidPdfContent]);
 
         await workerScope.onmessage({ 
             data: { 
                 type: 'process', 
-                file: invalidPdfContent, 
+                file: file, 
                 name: 'fake.pdf' 
             } 
         });
@@ -119,24 +136,26 @@ describe('pdfWorker', () => {
     it('should process a valid PDF and return success message with Transferable', async () => {
         const mockQpdf = {
             FS: {
+                mkdir: vi.fn(),
+                mount: vi.fn(),
+                unmount: vi.fn(),
                 writeFile: vi.fn(),
                 readFile: vi.fn().mockReturnValue(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x31])),
                 unlink: vi.fn()
             },
+            WORKERFS: {},
             callMain: vi.fn()
         };
         mockModule.instance = mockQpdf;
-        global.fetch.mockResolvedValue({
-            ok: true,
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10))
-        });
 
-        const validPdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00]).buffer;
+        const validPdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00]);
+        const file = new Blob([validPdfContent]);
+        file.name = 'test.pdf';
 
         await workerScope.onmessage({ 
             data: { 
                 type: 'process', 
-                file: validPdfContent, 
+                file: file, 
                 name: 'test.pdf' 
             } 
         });
@@ -144,7 +163,8 @@ describe('pdfWorker', () => {
         // Check if status processing message was sent
         expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
             type: 'status', 
-            state: 'processing' 
+            state: 'processing',
+            sub: expect.stringContaining('WorkerFS')
         }));
 
         // Check for success message
@@ -156,39 +176,45 @@ describe('pdfWorker', () => {
             expect.any(Array) // Transferable Objects (ArrayBuffer)
         );
 
-        // Verify MEMFS interactions
-        expect(mockQpdf.FS.writeFile).toHaveBeenCalled();
-        expect(mockQpdf.FS.unlink).toHaveBeenCalledTimes(2);
+        // Verify WorkerFS interactions
+        expect(mockQpdf.FS.mount).toHaveBeenCalledWith(
+            mockQpdf.WORKERFS, 
+            expect.objectContaining({ files: [file] }), 
+            "/mnt"
+        );
+        expect(mockQpdf.FS.unmount).toHaveBeenCalledWith("/mnt");
+        expect(mockQpdf.FS.unlink).toHaveBeenCalled();
     });
 
-    it('should zero-out the source buffer for security (SEC-3)', async () => {
+    it('should not require manual buffer zeroing with WorkerFS (SEC-3 transition)', async () => {
+        // With WorkerFS, the file is not copied into WASM heap initially.
+        // We verify that the process still completes securely.
         const mockQpdf = {
             FS: {
-                writeFile: vi.fn(),
+                mkdir: vi.fn(),
+                mount: vi.fn(),
+                unmount: vi.fn(),
                 readFile: vi.fn().mockReturnValue(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
                 unlink: vi.fn()
             },
+            WORKERFS: {},
             callMain: vi.fn()
         };
         mockModule.instance = mockQpdf;
-        global.fetch.mockResolvedValue({
-            ok: true,
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10))
-        });
 
-        const validPdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0xFF]).buffer;
-        const view = new Uint8Array(validPdfContent);
+        const validPdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0xFF]);
+        const file = new Blob([validPdfContent]);
+        file.name = 'security.pdf';
 
         await workerScope.onmessage({ 
             data: { 
                 type: 'process', 
-                file: validPdfContent, 
+                file: file, 
                 name: 'security.pdf' 
             } 
         });
 
-        // The source buffer (view) should be all zeros now
-        const isAllZeros = view.every(byte => byte === 0);
-        expect(isAllZeros).toBe(true);
+        // Ensure success was reached
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }), expect.any(Array));
     });
 });
