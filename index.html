@@ -47,7 +47,6 @@
     </header>
 
     <main>
-        <!-- Added ARIA roles for accessibility -->
         <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Upload PDF file to unlock"
             aria-live="polite">
             <!-- Upload Icon -->
@@ -72,6 +71,10 @@
             </div>
 
             <input type="file" id="file-input" accept="application/pdf" multiple aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div id="bento-grid" class="bento-grid hidden" aria-live="polite">
+            <!-- Dynamically populated file cards -->
         </div>
 
         <div class="shield-container">

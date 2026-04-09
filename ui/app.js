@@ -13,6 +13,7 @@ const statusText = document.getElementById('status-text');
 const subStatusText = document.getElementById('sub-status-text');
 const statusIcon = document.getElementById('status-icon');
 const spinner = document.getElementById('spinner');
+const bentoGrid = document.getElementById('bento-grid');
 
 // --- Worker & Engine State ---
 let isEngineReady = false;
@@ -46,7 +47,8 @@ if (fontLink) {
 const SVGS = {
     upload: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>`,
     success: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>`,
-    error: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`
+    error: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`,
+    pdf: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>`
 };
 
 // Safe SVG update — avoids innerHTML on the live document to prevent latent XSS vectors
@@ -76,6 +78,10 @@ function updateStatus(state, mainText, subText) {
     spinner.classList.remove('visible');
     statusIcon.classList.remove('hidden');
 
+    if (bentoGrid && !bentoGrid.classList.contains('hidden')) {
+        dropZone.classList.add('compact');
+    }
+
     if (state === 'processing' || state === 'loading') {
         dropZone.classList.add(state); // adds .processing or .loading
         spinner.classList.add('visible');
@@ -96,9 +102,58 @@ function resetState() {
         // Guard: only reset if the service layer and queue are no longer processing
         // and engine is ready
         if (!isQueueRunning && isEngineReady) {
-            updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
+            const hasFiles = bentoGrid && bentoGrid.children.length > 0;
+            if (hasFiles) {
+                updateStatus('default', 'Batch Complete', 'Select more files to append to the batch');
+            } else {
+                updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
+            }
         }
     }, 6000);
+}
+
+// --- Bento Grid Rendering ---
+function renderBentoGrid(files) {
+    const update = () => {
+        bentoGrid.classList.remove('hidden');
+        dropZone.classList.add('compact');
+
+        files.forEach(file => {
+            // Check if card already exists for this file object (by name and size as proxy)
+            const cardId = `file-${file.name.replace(/[^a-z0-9]/gi, '-')}-${file.size}`;
+            if (document.getElementById(cardId)) return;
+
+            const card = document.createElement('div');
+            card.className = 'file-card pending';
+            card.id = cardId;
+            card.innerHTML = `
+                <div class="file-info">
+                    <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        ${SVGS.pdf}
+                    </svg>
+                    <span class="file-name" title="${file.name}">${file.name}</span>
+                </div>
+                <div class="file-status">Pending</div>
+            `;
+            bentoGrid.appendChild(card);
+        });
+    };
+
+    if (document.startViewTransition) {
+        document.startViewTransition(update);
+    } else {
+        update();
+    }
+}
+
+function updateCardStatus(file, state, text) {
+    const cardId = `file-${file.name.replace(/[^a-z0-9]/gi, '-')}-${file.size}`;
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    card.className = `file-card ${state}`;
+    const statusEl = card.querySelector('.file-status');
+    if (statusEl) statusEl.textContent = text;
 }
 
 const MAX_BATCH_FILES = 20;
@@ -121,6 +176,9 @@ async function processQueue() {
     currentBatchProcessed = 0;
     currentBatchSuccessful = 0;
 
+    // Render/Update grid with all files in queue
+    renderBentoGrid(fileQueue);
+
     // Calculate total size to determine if we can safely zip in RAM
     const totalBatchSize = fileQueue.reduce((acc, f) => acc + f.size, 0);
     const useZip = (totalBatchSize < ZIP_MEMORY_LIMIT_BYTES) && (currentBatchTotal > 1);
@@ -131,12 +189,14 @@ async function processQueue() {
     fileQueue = [];
 
     const processingPromises = filesToProcess.map(async (file) => {
+        updateCardStatus(file, 'processing', 'Unlocking...');
+
         const callbacks = {
             onStatus: (state, main, sub) => {
                 // Update global status with current file info
-                // This is a placeholder until Phase 02-02 (Bento Grid)
                 if (isQueueRunning) {
                     updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, `${file.name}: ${main}`);
+                    updateCardStatus(file, 'processing', main);
                 }
             }
         };
@@ -146,11 +206,15 @@ async function processQueue() {
             currentBatchProcessed++;
             if (resultBlob) {
                 currentBatchSuccessful++;
+                updateCardStatus(file, 'success', 'Unlocked');
                 handleProcessedFile(resultBlob, file.name);
+            } else {
+                updateCardStatus(file, 'error', 'Failed');
             }
         } catch (error) {
             currentBatchProcessed++;
             console.error(`Queue: Failed to process ${file.name}:`, error);
+            updateCardStatus(file, 'error', 'Error');
         }
     });
 
