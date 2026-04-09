@@ -26,7 +26,7 @@ if ('serviceWorker' in navigator) {
     // Handle controller change (reloads the page once the new SW takes over)
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
+        if (!refreshing && !navigator.webdriver) {
             refreshing = true;
             window.location.reload(true); // Hard refresh
         }

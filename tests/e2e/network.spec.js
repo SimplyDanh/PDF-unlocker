@@ -9,6 +9,7 @@ test.describe('Phase 4: Engine Internalization & Offline Capability', () => {
             const registration = await navigator.serviceWorker.register('sw.js');
             await navigator.serviceWorker.ready;
         });
+        await page.reload();
         // Wait for Cross-Origin Isolation to be active (may involve an auto-reload)
         await page.waitForFunction(() => window.crossOriginIsolated === true, { timeout: 10000 });
     });

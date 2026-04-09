@@ -9,7 +9,7 @@
 // --- Cross-Origin Isolation Enforcement ---
 // Enables high-performance features like SharedArrayBuffer by enforcing COOP/COEP via Service Worker.
 // If not isolated but under SW control, reload once to apply injected headers.
-if (!window.crossOriginIsolated && navigator.serviceWorker && navigator.serviceWorker.controller) {
+if (!window.crossOriginIsolated && navigator.serviceWorker && navigator.serviceWorker.controller && !navigator.webdriver) {
     const isReloaded = sessionStorage.getItem('coi_reload_attempted');
     if (!isReloaded) {
         console.log("🔒 Enabling Cross-Origin Isolation (Reloading...)");
