@@ -9,7 +9,7 @@
   "services/pdfWorker.js": "sha384-YyoHCxgJ0vG4fEcdTYCGLgT8Tktw95TmXsAIJRsT13//Cd/BJO2xsOXit4DnrncX",
   "services/persistenceService.js": "sha384-Y261mvPo7LDegJ3kHV9DAGRBsSPlU3mkcCrJmH33N0v+8KSlouYk8Ougj1Pg/Ttt",
   "sw-register.js": "sha384-YU+vu+KlgYkwJh8qyiQz7Ir5S7dCGcYC9F06TZCFcAltL1d26pHMZFbwOTfk8EQe",
-  "sw.js": "sha384-FiYGXO0U9GQqvi9umFSTTryGAcp1M/x+xEsBcIc+FP743FpNrriSbsA/X+vV3qeu",
-  "ui/app.js": "sha384-PJaKN2rGwXmxF0AMu+Wj526n42V8pCQvbtvQpCTyuN/bghq5XgiLd45/EPHZNxsL",
-  "ui/styles.css": "sha384-U0utK+LmOKS1CaqLdXn3WHee4oKaSkyBDG6MPaEoeKo42ztICH9Y/3BH37dIaEzr"
+  "sw.js": "sha384-MnmpGI3e0fKeE/G7O2G+Nn8cAMA4bkNkRlyNA+Ukk/iX4MHc1VaEWYKfnUYr6dWa",
+  "ui/app.js": "sha384-jL9UXbCW1MB46G8dVLmYf01K983uP+XyTN0nEmwVRbtD6gxsIjTee1Y6/pqw35Y+",
+  "ui/styles.css": "sha384-2RRgJ3NUOQBSCZfbFn0QfKbC1OP7mraPRK1kd4jnGAlYvtucOO6t+kyZwj3cR3Y1"
 }
