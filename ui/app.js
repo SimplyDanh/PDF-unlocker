@@ -279,13 +279,55 @@ function resetState() {
     }, 6000);
 }
 
+// --- Bento Grid Roving Tabindex & Keyboard Nav ---
+bentoGrid.addEventListener('keydown', (e) => {
+    const cards = Array.from(bentoGrid.querySelectorAll('.file-card'));
+    const currentCard = e.target.closest('.file-card');
+    if (!currentCard) return;
+
+    const currentIndex = cards.indexOf(currentCard);
+    let nextIndex;
+
+    switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+            nextIndex = (currentIndex + 1) % cards.length;
+            break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+            nextIndex = (currentIndex - 1 + cards.length) % cards.length;
+            break;
+        case 'Home':
+            nextIndex = 0;
+            break;
+        case 'End':
+            nextIndex = cards.length - 1;
+            break;
+        case 'Enter':
+        case ' ':
+            // If the card has a manual download button (success state), trigger it
+            const downloadBtn = currentCard.querySelector('.card-download-btn');
+            if (downloadBtn && !downloadBtn.classList.contains('hidden')) {
+                e.preventDefault();
+                downloadBtn.click();
+            }
+            return;
+        default:
+            return;
+    }
+
+    e.preventDefault();
+    cards.forEach((card, i) => card.setAttribute('tabindex', i === nextIndex ? '0' : '-1'));
+    cards[nextIndex].focus();
+});
+
 // --- Bento Grid Rendering ---
 async function renderBentoGrid(files) {
     const update = () => {
         bentoGrid.classList.remove('hidden');
         dropZone.classList.add('compact');
 
-        files.forEach(file => {
+        files.forEach((file, index) => {
             // Check if card already exists for this file object (by name and size as proxy)
             const cardId = `file-${file.name.replace(/[^a-z0-9]/gi, '-')}-${file.size}`;
             if (document.getElementById(cardId)) return;
@@ -293,6 +335,9 @@ async function renderBentoGrid(files) {
             const card = document.createElement('div');
             card.className = 'file-card pending';
             card.id = cardId;
+            card.setAttribute('role', 'listitem');
+            // Only the first card in the grid is focusable initially
+            card.setAttribute('tabindex', bentoGrid.children.length === 0 ? '0' : '-1');
             card.innerHTML = `
                 <div class="file-info">
                     <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -703,17 +748,44 @@ function setTheme(themeId) {
 // Generate Swatches
 function initThemeHud() {
     themeRibbon.innerHTML = '';
-    themeDefinitions.forEach(theme => {
+    themeDefinitions.forEach((theme, index) => {
         const swatch = document.createElement('div');
         swatch.className = 'theme-swatch';
         swatch.dataset.id = theme.id;
         swatch.dataset.label = theme.label;
         swatch.setAttribute('role', 'button');
-        swatch.setAttribute('tabindex', '0');
-        swatch.setAttribute('aria-label', `Switch to ${theme.label} theme`);
         
-        // Inline styles for swatch colors (fallback to theme vars if needed)
-        // Note: In a real app we'd grab these from a config or computed style
+        // Initial tabindex: only the first swatch is reachable via Tab
+        swatch.setAttribute('tabindex', index === 0 ? '0' : '-1');
+        swatch.setAttribute('aria-label', `Switch to ${theme.label} theme`);
+
+        // Keyboard navigation for roving tabindex
+        swatch.addEventListener('keydown', (e) => {
+            const swatches = Array.from(themeRibbon.querySelectorAll('.theme-swatch'));
+            const currentIndex = swatches.indexOf(swatch);
+            let nextIndex;
+
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                nextIndex = (currentIndex + 1) % swatches.length;
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                nextIndex = (currentIndex - 1 + swatches.length) % swatches.length;
+            } else if (e.key === 'Home') {
+                nextIndex = 0;
+            } else if (e.key === 'End') {
+                nextIndex = swatches.length - 1;
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                swatch.click();
+                return;
+            } else {
+                return;
+            }
+
+            e.preventDefault();
+            swatches.forEach((s, i) => s.setAttribute('tabindex', i === nextIndex ? '0' : '-1'));
+            swatches[nextIndex].focus();
+        });
+
         const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svgIcon.setAttribute("viewBox", "0 0 24 24");
         svgIcon.setAttribute("fill", "none");
@@ -736,7 +808,19 @@ function initThemeHud() {
     // HUD Interactions
     themeTrigger.addEventListener('click', () => {
         themeHud.classList.toggle('expanded');
-        if (themeHud.classList.contains('expanded')) resetHudTimer();
+        if (themeHud.classList.contains('expanded')) {
+            resetHudTimer();
+            // Focus the first swatch when expanding via keyboard
+            const firstSwatch = themeRibbon.querySelector('.theme-swatch');
+            if (firstSwatch) firstSwatch.focus();
+        }
+    });
+
+    themeTrigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            themeTrigger.click();
+        }
     });
 
     themeHud.addEventListener('mouseenter', () => clearTimeout(hudTimer));
@@ -893,8 +977,29 @@ auditModalBackdrop.addEventListener('click', (e) => {
 
 // Close modal on Escape key
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && auditModalBackdrop.classList.contains('open')) {
+    if (!auditModalBackdrop.classList.contains('open')) return;
+
+    if (e.key === 'Escape') {
         closeAuditModal();
+        return;
+    }
+
+    // Focus trap: cycle Tab within audit modal
+    if (e.key === 'Tab') {
+        const auditPanel = document.querySelector('.audit-panel');
+        const focusable = auditPanel.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
     }
 });
 

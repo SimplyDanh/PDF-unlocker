@@ -367,16 +367,29 @@ main {
 }
 
 /* Premium Focus Rings */
-.drop-zone:focus-visible,
-.theme-toggle:focus-visible,
-.about-toggle:focus-visible,
-.modal-close:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--accent-color);
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+.theme-swatch:focus-visible,
+.file-card:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--accent-color) !important;
 }
 
 .drop-zone:focus-visible {
     border-color: var(--accent-color);
+}
+
+.file-card:focus-visible {
+    border-color: var(--accent-color);
+    transform: translateY(-4px) scale(1.02);
+}
+
+.theme-swatch:focus-visible {
+    transform: scale(1.15) translateX(-4px);
+    border-color: var(--accent-color);
+    z-index: 10;
 }
 
 .drop-zone:hover {
