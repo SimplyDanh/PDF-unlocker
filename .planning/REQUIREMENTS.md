@@ -59,5 +59,5 @@
 - [x] **REQ-7.4:** Performance Instrumentation (Telemetry for worker memory)
 
 ## ✨ Animation Optimization (Phase 8)
-- [ ] **REQ-8.1:** Animation performance audit and bottleneck identification (FPS/Repaint monitoring).
-- [ ] **REQ-8.2:** Hardware acceleration and compositor optimization (Transform-based mesh movement).
+- [x] **REQ-8.1:** Animation performance audit and bottleneck identification (FPS/Repaint monitoring).
+- [x] **REQ-8.2:** Hardware acceleration and compositor optimization (Transform-based mesh movement).
