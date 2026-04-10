@@ -24,6 +24,10 @@ test.describe('Security UX', () => {
                 body: `
                     window.pdfService = {
                         initWasm: () => Promise.resolve(),
+                        startJob: () => Promise.resolve(),
+                        getInterruptedJobs: () => Promise.resolve([]),
+                        resumeJob: () => {},
+                        getJobFiles: () => Promise.resolve([]),
                         WorkerPool: {
                             enqueue: async (file, callbacks, config) => {
                                 console.log('MOCK: Processing file', file.name);

@@ -151,22 +151,67 @@ async function processFile(file, fileName) {
             sub: 'Preparing output.' 
         });
 
-        // Read the result from MEMFS (output is in MEMFS)
-        const outputFile = qpdfModule.FS.readFile(outputName);
-        
-        // Calculate SHA-256 hash of the output
-        const hashBuffer = await self.crypto.subtle.digest('SHA-256', outputFile);
-        const hashHex = bufferToHex(hashBuffer);
+        // Constants for chunked streaming (Task 06-02)
+        const CHUNK_SIZE = 64 * 1024 * 1024; // 64MB
+        const STREAM_THRESHOLD = 250 * 1024 * 1024; // 250MB
 
-        // Send back the processed file using Transferable Objects
-        const outputBuffer = new Uint8Array(outputFile).buffer;
-        
-        self.postMessage({ 
-            type: 'success', 
-            blob: outputBuffer, 
-            name: fileName,
-            hash: hashHex
-        }, [outputBuffer]);
+        const outputStats = qpdfModule.FS.stat(outputName);
+        const outputSize = outputStats.size;
+
+        if (outputSize > STREAM_THRESHOLD) {
+            self.postMessage({ 
+                type: 'status', 
+                state: 'processing', 
+                main: 'Streaming output...', 
+                sub: `Large file (${(outputSize / (1024 * 1024)).toFixed(1)} MB) detected. Using chunked transfer.` 
+            });
+
+            const fd = qpdfModule.FS.open(outputName, 'r');
+            const totalChunks = Math.ceil(outputSize / CHUNK_SIZE);
+            
+            for (let i = 0; i < totalChunks; i++) {
+                const buffer = new Uint8Array(Math.min(CHUNK_SIZE, outputSize - i * CHUNK_SIZE));
+                qpdfModule.FS.read(fd, buffer, 0, buffer.length, i * CHUNK_SIZE);
+                
+                const chunkBuffer = buffer.buffer;
+                self.postMessage({
+                    type: 'chunk',
+                    chunkIndex: i,
+                    totalChunks: totalChunks,
+                    data: chunkBuffer
+                }, [chunkBuffer]);
+            }
+            
+            qpdfModule.FS.close(fd);
+
+            // For ultra-large files, we provide a size-based signature instead of a full SHA-256
+            // to avoid loading the entire file into the worker's memory just for hashing.
+            const hashPlaceholder = `streamed-${outputSize}-${Date.now()}`;
+
+            self.postMessage({ 
+                type: 'success', 
+                streamed: true,
+                name: fileName,
+                hash: hashPlaceholder
+            });
+        } else {
+            // Read the result from MEMFS (output is in MEMFS)
+            const outputFile = qpdfModule.FS.readFile(outputName);
+            
+            // Calculate SHA-256 hash of the output
+            const hashBuffer = await self.crypto.subtle.digest('SHA-256', outputFile);
+            const hashHex = bufferToHex(hashBuffer);
+
+            // Send back the processed file using Transferable Objects
+            const outputBuffer = new Uint8Array(outputFile).buffer;
+            
+            self.postMessage({ 
+                type: 'success', 
+                blob: outputBuffer, 
+                name: fileName,
+                hash: hashHex
+            }, [outputBuffer]);
+        }
 
         // Cleanup output from MEMFS immediately
         try {

@@ -1647,3 +1647,62 @@ body.modal-open {
     transform: scale(0.95);
     transition: all 0.5s ease;
 }
+
+/* --- Recovery Banner --- */
+.recovery-banner {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--card-bg);
+    border: 1px solid var(--accent-color);
+    backdrop-filter: blur(12px);
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 90%;
+    width: 32rem;
+}
+
+@keyframes slideDown {
+    from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.recovery-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.recovery-content svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-color);
+    min-width: 24px;
+}
+
+.recovery-content p {
+    margin: 0;
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.875rem;
+    flex: 1;
+}
+
+.recovery-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8125rem;
+    border-radius: 8px;
+}

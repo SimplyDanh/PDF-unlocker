@@ -51,6 +51,10 @@ test.describe('Phase 2-03: Advanced ZIP Options & Post-Processing', () => {
         await page.evaluate(() => {
             window.pdfService = {
                 initWasm: () => Promise.resolve(),
+                startJob: () => Promise.resolve(),
+                getInterruptedJobs: () => Promise.resolve([]),
+                resumeJob: () => {},
+                getJobFiles: () => Promise.resolve([]),
                 WorkerPool: {
                     enqueue: async (file, callbacks, config) => {
                         // Simulate some processing time

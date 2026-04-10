@@ -5,7 +5,9 @@
 - **Phase 2 (UX Polish):** ✅ COMPLETED
 - **Phase 4 (Self-Containment):** ✅ COMPLETED
 - **Phase 3 (Performance Hardening):** ✅ COMPLETED
-- **Phase 5 (Security Hardening):** ⏳ Upcoming
+- **Phase 5 (Security Hardening):** ✅ COMPLETED
+- **Phase 6 (Reliability & Persistence):** 🏗️ IN PROGRESS
+- **Phase 7 (Automation & Accessibility):** 🏗️ PLANNED
 
 ---
 
@@ -33,13 +35,10 @@
 - [x] 02-01-PLAN.md — Worker Pool & Individual Progress
 - [x] 02-02-PLAN.md — Bento Grid & UI Transitions
 - [x] 02-03-PLAN.md — Advanced Downloads & ZIP Options
-- **Phase 3 (Performance Hardening):** ✅ COMPLETED
-- **Phase 5 (Security Hardening):** ⏳ Upcoming
+- [x] 02-04-PLAN.md — Theme Engine & UI HUD Integration
 
 ---
 
-## Phase 1: Engine Optimization & Worker Migration ✅
-...
 ## Phase 4: Internalize Engine Dependencies ✅
 **Goal:** Move external WASM/JS dependencies from CDNs to local assets to make the project fully self-contained.
 
@@ -58,23 +57,54 @@
 - [x] **REQ-3.4:** Heavy Load UI Warnings (Scale-aware progress and batch limits)
 
 **Plans:**
-3/3 plans executed
 - [x] 03-01-PLAN.md — Cross-Origin Isolation Foundation
 - [x] 03-02-PLAN.md — Zero-Copy Large File Engine (WorkerFS)
 - [x] 03-03-PLAN.md — Heavy Load UI & Scale Warnings
 
+---
 
-## Phase 5: Advanced Security & Zero-Trust Hardening ⏳
+## Phase 5: Advanced Security & Zero-Trust Hardening ✅
 *Goal: Enhance the "Zero-Trust" promise by internalizing security policies and providing cryptographically verified outputs.*
 
 **Requirements:**
-- [ ] **REQ-5.1:** Integrity Checksums (Subresource Integrity for all local assets)
-- [ ] **REQ-5.2:** Hardened CSP v3 (Strict Content Security Policy with nonces)
-- [ ] **REQ-5.3:** In-Browser Audit Log (Local-only audit trail for compliance)
-- [ ] **REQ-5.4:** Cryptographic Verification (SHA-256 hashes for processed files)
+- [x] **REQ-5.1:** Integrity Checksums (Subresource Integrity for all local assets)
+- [x] **REQ-5.2:** Hardened CSP v3 (Strict Content Security Policy with nonces)
+- [x] **REQ-5.3:** In-Browser Audit Log (Local-only audit trail for compliance)
+- [x] **REQ-5.4:** Cryptographic Verification (SHA-256 hashes for processed files)
 
 **Plans:**
-- [ ] 05-01-PLAN.md — Advanced Security Logic & Persistence
-- [ ] 05-02-PLAN.md — Integrity & Policy Hardening
-- [ ] 05-03-PLAN.md — Security UX & Integration
+- [x] 05-01-PLAN.md — Advanced Security Logic & Persistence
+- [x] 05-02-PLAN.md — Integrity & Policy Hardening
+- [x] 05-03-PLAN.md — Security UX & Integration
 
+---
+
+## Phase 6: Reliability & Persistence (IndexedDB & Chunking) 🏗️
+*Goal: Enable resumable processing and handle ultra-large files (>1GB) via chunked IndexedDB spillover.*
+
+**Requirements:**
+- [ ] **REQ-6.1:** Persistent Job Queue (IndexedDB storage for active batches)
+- [ ] **REQ-6.2:** Chunked Output Streaming (Spillover large buffers to IndexedDB)
+- [ ] **REQ-6.3:** Resume UX (Restore state on page reload/re-entry)
+- [ ] **REQ-6.4:** Memory Safety Audit (Flush buffers to disk for 1GB+ outputs)
+
+**Plans:** 1/3 plans executed
+- [x] 06-01-PLAN.md — IndexedDB Job Store & Schema
+- [ ] 06-02-PLAN.md — Chunked Worker API & Stream Implementation
+- [ ] 06-03-PLAN.md — Resume Logic & UI Recovery Integration
+
+---
+
+## Phase 7: Automation & Accessibility (Maintenance & UX) 🏗️
+*Goal: Harden the project lifecycle with automated CI pipelines and inclusive UI patterns.*
+
+**Requirements:**
+- [ ] **REQ-7.1:** Automated SRI Pipeline (Auto-generate hashes for vendor assets in CI)
+- [ ] **REQ-7.2:** Multi-Browser CI (Playwright testing for FF/Safari and offline modes)
+- [ ] **REQ-7.3:** Accessibility Audit (ARIA parity for Bento Grid and Theme HUD)
+- [ ] **REQ-7.4:** Performance Instrumentation (Telemetry for worker memory and crash stats)
+
+**Plans:** 3 plans
+- [ ] 07-01-PLAN.md — CI/CD Automation & SRI Registry
+- [ ] 07-02-PLAN.md — Accessibility Parity & ARIA
+- [ ] 07-03-PLAN.md — Telemetry & Diagnostics Integration

@@ -19,6 +19,7 @@ window.pdfService = (function () {
         const workers = [];
         const taskQueue = [];
         let isInitialized = false;
+        let currentJobId = null;
 
         /**
          * Initialize the worker pool.
@@ -51,11 +52,31 @@ window.pdfService = (function () {
         }
 
         /**
+         * Explicitly start a new job batch.
+         * @param {number} totalFiles 
+         */
+        async function startJob(totalFiles) {
+            if (window.persistenceService) {
+                currentJobId = await window.persistenceService.createJob({ totalFiles });
+                return currentJobId;
+            }
+            return null;
+        }
+
+        /**
+         * Set current jobId for resuming.
+         * @param {number} jobId 
+         */
+        function setCurrentJobId(jobId) {
+            currentJobId = jobId;
+        }
+
+        /**
          * Set up message routing for a worker.
          */
         function setupWorker(workerObj) {
             workerObj.worker.onmessage = (e) => {
-                const { type, state, main, sub, blob, name, hash } = e.data;
+                const { type, state, main, sub, blob, name, hash, streamed } = e.data;
 
                 switch (type) {
                     case 'ready':
@@ -74,8 +95,29 @@ window.pdfService = (function () {
                         }
                         break;
 
+                    case 'chunk':
+                        // Handle incoming chunk (Task 06-02)
+                        if (workerObj.currentTask?.persistenceFileId && window.persistenceService) {
+                            window.persistenceService.saveChunk(
+                                workerObj.currentTask.persistenceFileId, 
+                                e.data.chunkIndex, 
+                                e.data.data
+                            ).catch(err => console.error("WorkerPool: Failed to save chunk:", err));
+                            
+                            // Update UI with streaming progress
+                            if (workerObj.currentTask.callbacks?.onStatus) {
+                                const progress = Math.round((e.data.chunkIndex + 1) / e.data.totalChunks * 100);
+                                workerObj.currentTask.callbacks.onStatus(
+                                    'processing', 
+                                    'Streaming output...', 
+                                    `Saving chunk ${e.data.chunkIndex + 1} of ${e.data.totalChunks} (${progress}%)`
+                                );
+                            }
+                        }
+                        break;
+
                     case 'success':
-                        handleWorkerSuccess(workerObj, blob, name, hash);
+                        handleWorkerSuccess(workerObj, blob, name, hash, streamed);
                         break;
 
                     case 'error':
@@ -96,10 +138,26 @@ window.pdfService = (function () {
          * @param {object} callbacks 
          * @param {object} config 
          */
-        function enqueue(file, callbacks, config = { returnBlob: false }) {
+        async function enqueue(file, callbacks, config = { returnBlob: false }) {
             if (!isInitialized) init();
 
-            const task = { file, callbacks, config, resolve: null };
+            let persistenceFileId = null;
+            const jobId = currentJobId;
+
+            if (window.persistenceService && jobId) {
+                try {
+                    persistenceFileId = await window.persistenceService.addFile({
+                        jobId,
+                        name: file.name,
+                        originalBlob: file,
+                        status: 'processing'
+                    });
+                } catch (err) {
+                    console.error("Failed to persist file record:", err);
+                }
+            }
+
+            const task = { file, callbacks, config, resolve: null, jobId, persistenceFileId };
             const promise = new Promise((resolve) => {
                 task.resolve = resolve;
             });
@@ -152,7 +210,7 @@ window.pdfService = (function () {
         /**
          * Handle successful task completion.
          */
-        function handleWorkerSuccess(workerObj, outputBuffer, fileName, hash) {
+        async function handleWorkerSuccess(workerObj, outputBuffer, fileName, hash, streamed = false) {
             const { currentTask } = workerObj;
             if (!currentTask) return;
 
@@ -164,7 +222,43 @@ window.pdfService = (function () {
                 });
             }
 
-            const outputBlob = new Blob([outputBuffer], { type: "application/pdf" });
+            let outputBlob;
+            if (!streamed && outputBuffer) {
+                outputBlob = new Blob([outputBuffer], { type: "application/pdf" });
+            } else if (streamed && window.persistenceService && currentTask.persistenceFileId) {
+                // If streamed, we need to reassemble from IndexedDB chunks (Task 06-02)
+                if (currentTask.callbacks?.onStatus) {
+                    currentTask.callbacks.onStatus('processing', 'Finalizing...', 'Reassembling processed file.');
+                }
+                outputBlob = await window.persistenceService.assembleFileFromChunks(currentTask.persistenceFileId);
+            }
+
+            if (!outputBlob) {
+                handleWorkerError(workerObj, 'Assembly Failed', 'Failed to retrieve or reassemble processed file.');
+                return;
+            }
+
+            // Persistence update
+            if (window.persistenceService && currentTask.persistenceFileId) {
+                try {
+                    await window.persistenceService.updateFile(currentTask.persistenceFileId, {
+                        status: 'completed',
+                        outputBlob: outputBlob,
+                        hash: hash
+                    });
+
+                    // Update job progress
+                    const jobFiles = await window.persistenceService.getFilesByJob(currentTask.jobId);
+                    const processed = jobFiles.filter(f => f.status === 'completed' || f.status === 'failed').length;
+                    
+                    await window.persistenceService.updateJob(currentTask.jobId, {
+                        processedCount: processed,
+                        status: processed === jobFiles.length ? 'completed' : 'processing'
+                    });
+                } catch (err) {
+                    console.error("Failed to update persistence on success:", err);
+                }
+            }
             
             if (currentTask.config?.returnBlob) {
                 currentTask.resolve({ blob: outputBlob, hash: hash });
@@ -193,7 +287,7 @@ window.pdfService = (function () {
         /**
          * Handle task error.
          */
-        function handleWorkerError(workerObj, main, sub) {
+        async function handleWorkerError(workerObj, main, sub) {
             const { currentTask } = workerObj;
             if (currentTask) {
                 // Audit Log
@@ -203,6 +297,26 @@ window.pdfService = (function () {
                         error: main,
                         details: sub
                     });
+                }
+
+                // Persistence update
+                if (window.persistenceService && currentTask.persistenceFileId) {
+                    try {
+                        await window.persistenceService.updateFile(currentTask.persistenceFileId, {
+                            status: 'failed'
+                        });
+
+                        // Update job progress
+                        const jobFiles = await window.persistenceService.getFilesByJob(currentTask.jobId);
+                        const processed = jobFiles.filter(f => f.status === 'completed' || f.status === 'failed').length;
+                        
+                        await window.persistenceService.updateJob(currentTask.jobId, {
+                            processedCount: processed,
+                            status: processed === jobFiles.length ? 'completed' : 'processing'
+                        });
+                    } catch (err) {
+                        console.error("Failed to update persistence on error:", err);
+                    }
                 }
 
                 if (currentTask.callbacks?.onStatus) {
@@ -225,6 +339,8 @@ window.pdfService = (function () {
         return {
             init,
             enqueue,
+            startJob,
+            setCurrentJobId,
             get activeWorkerCount() { return workers.filter(w => w.isBusy).length; },
             get poolSize() { return workers.length; }
         };
@@ -276,10 +392,29 @@ window.pdfService = (function () {
 
     return {
         initWasm: async () => {
+            if (window.persistenceService) {
+                await window.persistenceService.init().catch(err => console.error("Persistence init failed:", err));
+            }
             WorkerPool.init();
             return Promise.resolve();
         },
         processFile,
+        startJob: (...args) => WorkerPool.startJob(...args),
+        resumeJob: (jobId) => {
+            WorkerPool.setCurrentJobId(jobId);
+        },
+        getInterruptedJobs: () => {
+            if (window.persistenceService) {
+                return window.persistenceService.getIncompleteJobs();
+            }
+            return Promise.resolve([]);
+        },
+        getJobFiles: (jobId) => {
+            if (window.persistenceService) {
+                return window.persistenceService.getFilesByJob(jobId);
+            }
+            return Promise.resolve([]);
+        },
         WorkerPool,
         get isProcessing() { return WorkerPool.activeWorkerCount > 0; },
         get wasmSupportStatus() { return wasmSupportStatus; }

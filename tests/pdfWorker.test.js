@@ -29,7 +29,8 @@ describe('pdfWorker', () => {
                     unlink: vi.fn(),
                     mkdir: vi.fn(),
                     mount: vi.fn(),
-                    unmount: vi.fn()
+                    unmount: vi.fn(),
+                    stat: vi.fn().mockReturnValue({ size: 100 })
                 }, 
                 WORKERFS: {},
                 callMain: vi.fn() 
@@ -157,8 +158,10 @@ describe('pdfWorker', () => {
                 unmount: vi.fn(),
                 writeFile: vi.fn(),
                 readFile: vi.fn().mockReturnValue(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x31])),
-                unlink: vi.fn()
+                unlink: vi.fn(),
+                stat: vi.fn().mockReturnValue({ size: 100 })
             },
+
             WORKERFS: {},
             callMain: vi.fn()
         };
@@ -215,7 +218,8 @@ describe('pdfWorker', () => {
                 mount: vi.fn(),
                 unmount: vi.fn(),
                 readFile: vi.fn().mockReturnValue(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
-                unlink: vi.fn()
+                unlink: vi.fn(),
+                stat: vi.fn().mockReturnValue({ size: 100 })
             },
             WORKERFS: {},
             callMain: vi.fn()
@@ -236,5 +240,66 @@ describe('pdfWorker', () => {
 
         // Ensure success was reached
         expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }), expect.any(Array));
+    });
+
+    it('should use chunked streaming for files over 250MB', async () => {
+        const STREAM_THRESHOLD = 250 * 1024 * 1024;
+        const largeSize = STREAM_THRESHOLD + 1024;
+        
+        const mockQpdf = {
+            FS: {
+                mkdir: vi.fn(),
+                mount: vi.fn(),
+                unmount: vi.fn(),
+                stat: vi.fn().mockReturnValue({ size: largeSize }),
+                open: vi.fn().mockReturnValue(1), // fd = 1
+                read: vi.fn((fd, buffer, offset, length, position) => {
+                    // Fill buffer with some dummy data
+                    for (let i = 0; i < length; i++) buffer[i] = 0xAA;
+                    return length;
+                }),
+                close: vi.fn(),
+                unlink: vi.fn()
+            },
+            WORKERFS: {},
+            callMain: vi.fn()
+        };
+        mockModule.instance = mockQpdf;
+
+        const validPdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00]);
+        const file = new Blob([validPdfContent]);
+        file.name = 'large.pdf';
+
+        await workerScope.onmessage({ 
+            data: { 
+                type: 'process', 
+                file: file, 
+                name: 'large.pdf' 
+            } 
+        });
+
+        // Verify status message for streaming
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
+            type: 'status', 
+            main: 'Streaming output...' 
+        }));
+
+        // Verify chunks were sent
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
+            type: 'chunk',
+            chunkIndex: 0
+        }), expect.any(Array));
+
+        // Verify final success message for streamed file
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
+            type: 'success', 
+            streamed: true,
+            hash: expect.stringContaining('streamed-')
+        }));
+
+        // Verify FS interactions for streaming
+        expect(mockQpdf.FS.open).toHaveBeenCalled();
+        expect(mockQpdf.FS.read).toHaveBeenCalled();
+        expect(mockQpdf.FS.close).toHaveBeenCalled();
     });
 });

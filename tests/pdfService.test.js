@@ -61,11 +61,78 @@ describe('pdfService (Worker Proxy)', () => {
             getLogs: vi.fn().mockResolvedValue([]),
         });
 
+        // Mock persistenceService
+        vi.stubGlobal('persistenceService', {
+            init: vi.fn().mockResolvedValue(undefined),
+            createJob: vi.fn().mockResolvedValue(1),
+            updateJob: vi.fn().mockResolvedValue(undefined),
+            addFile: vi.fn().mockResolvedValue(1),
+            updateFile: vi.fn().mockResolvedValue(undefined),
+            getFilesByJob: vi.fn().mockResolvedValue([]),
+        });
+
         // Evaluate the service code
-        const mockWindow = { auditService: window.auditService };
+        const mockWindow = { 
+            auditService: window.auditService,
+            persistenceService: window.persistenceService
+        };
         const fn = new Function('window', pdfServiceContent);
         fn(mockWindow);
         pdfService = mockWindow.pdfService;
+    });
+
+    it('should persist job and file records during processing', async () => {
+        const onStatus = vi.fn();
+        const mockFile = {
+            type: 'application/pdf',
+            name: 'persist.pdf',
+            size: 100
+        };
+
+        // Start a job
+        await pdfService.startJob(1);
+        expect(window.persistenceService.createJob).toHaveBeenCalledWith({ totalFiles: 1 });
+
+        const processPromise = pdfService.processFile(mockFile, { onStatus }, { returnBlob: true });
+        
+        const workers = mockWorkerConstructor.mock.results.map(r => r.value);
+        workers[0].onmessage({ data: { type: 'ready' } });
+        
+        await vi.waitFor(() => expect(window.persistenceService.addFile).toHaveBeenCalledWith(
+            expect.objectContaining({ jobId: 1, name: 'persist.pdf' })
+        ));
+
+        // Wait for the service to proceed to 'process' message after addFile resolves
+        await vi.waitFor(() => expect(workers[0].postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'process' })
+        ));
+
+        // Simulate success from worker
+        const outputBuffer = new ArrayBuffer(4);
+        window.persistenceService.getFilesByJob.mockResolvedValue([
+            { id: 1, jobId: 1, status: 'completed' }
+        ]);
+
+        workers[0].onmessage({ 
+            data: { 
+                type: 'success', 
+                blob: outputBuffer, 
+                name: 'persist.pdf',
+                hash: 'abc123hash'
+            } 
+        });
+
+        await processPromise;
+        
+        expect(window.persistenceService.updateFile).toHaveBeenCalledWith(1, expect.objectContaining({
+            status: 'completed',
+            hash: 'abc123hash'
+        }));
+
+        expect(window.persistenceService.updateJob).toHaveBeenCalledWith(1, expect.objectContaining({
+            processedCount: 1,
+            status: 'completed'
+        }));
     });
 
     it('should log success event when processing completes', async () => {
@@ -175,7 +242,7 @@ describe('pdfService (Worker Proxy)', () => {
     it('should initialize worker pool and send init message to all', async () => {
         const initPromise = pdfService.initWasm();
 
-        expect(mockWorkerConstructor).toHaveBeenCalledTimes(4);
+        await vi.waitFor(() => expect(mockWorkerConstructor).toHaveBeenCalledTimes(4));
         const workers = mockWorkerConstructor.mock.results.map(r => r.value);
         workers.forEach(w => {
             expect(w.postMessage).toHaveBeenCalledWith({ type: 'init' });
@@ -232,6 +299,66 @@ describe('pdfService (Worker Proxy)', () => {
         expect(result.blob.options.type).toBe("application/pdf");
         expect(result.hash).toBe("hash123");
         expect(pdfService.isProcessing).toBe(false);
+    });
+
+    it('should handle chunked messages and reassemble streamed file', async () => {
+        const onStatus = vi.fn();
+        const mockFile = {
+            type: 'application/pdf',
+            name: 'large.pdf',
+            size: 300 * 1024 * 1024
+        };
+
+        // Mock persistenceService for chunks
+        window.persistenceService.saveChunk = vi.fn().mockResolvedValue(1);
+        window.persistenceService.assembleFileFromChunks = vi.fn().mockResolvedValue(new Blob([], { type: 'application/pdf' }));
+        window.persistenceService.getFilesByJob.mockResolvedValue([{ id: 1, status: 'completed' }]);
+
+        // Start a job to enable file persistence
+        await pdfService.startJob(1);
+
+        const processPromise = pdfService.processFile(mockFile, { onStatus }, { returnBlob: true });
+        
+        const workers = mockWorkerConstructor.mock.results.map(r => r.value);
+
+        // Wait for persistence layer to create the file record
+        await vi.waitFor(() => expect(window.persistenceService.addFile).toHaveBeenCalled());
+
+        workers[0].onmessage({ data: { type: 'ready' } });
+
+        // Wait for the service to proceed to 'process' message after addFile resolves
+        await vi.waitFor(() => expect(workers[0].postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'process' })
+        ));
+        
+        // Simulate a chunk message
+        const chunkData = new ArrayBuffer(1024);
+        workers[0].onmessage({ 
+            data: { 
+                type: 'chunk', 
+                chunkIndex: 0, 
+                totalChunks: 1, 
+                data: chunkData 
+            } 
+        });
+
+        expect(window.persistenceService.saveChunk).toHaveBeenCalledWith(1, 0, chunkData);
+
+        // Simulate success message for streamed file
+        workers[0].onmessage({ 
+            data: { 
+                type: 'success', 
+                streamed: true, 
+                name: 'large.pdf',
+                hash: 'streamed-hash'
+            } 
+        });
+
+        const result = await processPromise;
+        
+        expect(window.persistenceService.assembleFileFromChunks).toHaveBeenCalledWith(1);
+        expect(result.hash).toBe('streamed-hash');
+        expect(onStatus).toHaveBeenCalledWith('processing', 'Finalizing...', expect.any(String));
     });
 
     it('should handle status updates from worker', async () => {

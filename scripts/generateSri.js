@@ -6,6 +6,7 @@ const assets = [
     'ui/app.js',
     'ui/styles.css',
     'services/pdfService.js',
+    'services/persistenceService.js',
     'services/batchService.js',
     'services/auditService.js',
     'services/pdfWorker.js',

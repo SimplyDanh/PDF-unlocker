@@ -23,7 +23,7 @@
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap"
             rel="stylesheet">
     </noscript>
-    <link rel="stylesheet" href="ui/styles.css" integrity="sha384-73w91IocV7LVdmr68gUdAYPbKFAAM2KskbAoUVvVXISJifXP+2StrO/XJEUUxHUo" crossorigin="anonymous">
+    <link rel="stylesheet" href="ui/styles.css" integrity="sha384-AfBQ21iVD38KYMgo0Z7L8iqQOvqCQXjazwT6fdkVgnU1HzRKFymGllfeIaGes1xm" crossorigin="anonymous">
 </head>
 
 <body>
@@ -33,6 +33,19 @@
         <div class="update-content">
             <p>A new version is available!</p>
             <button id="refresh-btn" class="refresh-btn">Refresh Now</button>
+        </div>
+    </div>
+
+    <div id="recovery-banner" class="recovery-banner hidden" role="alert" aria-live="assertive">
+        <div class="recovery-content">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p>An interrupted session was found. Would you like to resume processing?</p>
+            <div class="recovery-actions">
+                <button id="resume-btn" class="primary-btn btn-sm">Resume</button>
+                <button id="discard-btn" class="text-btn btn-sm">Discard</button>
+            </div>
         </div>
     </div>
 
@@ -283,11 +296,12 @@
     <script src="assets/vendor/jszip.min.js"
         integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"
         async></script>
-    <script src="services/auditService.js" integrity="sha384-+qj2BJVH5JaHkz2ChNgLK5GTFDU3dzI0rc+PoJRUD3IDzPOZm3ETcUYClq1rQ4j0" crossorigin="anonymous" defer></script>
-    <script src="services/pdfService.js" integrity="sha384-ePuuSP2Ec4mbIWgV1j8OpQtUKy64YvpMPk5cruP4xEMTuserAPXOeeGKwecYPfKC" crossorigin="anonymous" defer></script>
-    <script src="services/batchService.js" integrity="sha384-hDa89Dbl4VdsPOopbJQv71voTQ8Wt+IMIBldGcCCLbrKR+V+5vO0m35UdYaY+qcv" crossorigin="anonymous" defer></script>
-    <script src="ui/app.js" integrity="sha384-jYiE0CSA7vXiYDkib6G/U8cmhNk6vSmo8da3MKJlfN20F+8IuLhPbQR+I3RMAo4l" crossorigin="anonymous" defer></script>
-    <script src="sw-register.js" integrity="sha384-YU+vu+KlgYkwJh8qyiQz7Ir5S7dCGcYC9F06TZCFcAltL1d26pHMZFbwOTfk8EQe" crossorigin="anonymous" defer></script>
+    <script src="services/auditService.js" integrity="sha384-hs9EJXHVuHPgw7EjFx0Zn8uaNuO2nOSZGOgMG2Fe73kebb2dYkY+xUaYyl01THiH" crossorigin="anonymous" defer></script>
+    <script src="services/persistenceService.js" integrity="sha384-N5CHwvzvTy07rHsXwyv7SadfznAacUqQDzpRzsW7ytxHqRz1Tn07QfuCMR+YDSNM" crossorigin="anonymous" defer></script>
+    <script src="services/pdfService.js" integrity="sha384-98CoudO7orEQ07MZaaxyTbuxkR6JSmMJScVc/CegwXtQYs9gIhxxBLxbVNWlgb9N" crossorigin="anonymous" defer></script>
+    <script src="services/batchService.js" integrity="sha384-zGnMhCUI7W71mbxW2+FjamrrjpYe8e/fqD7wUj3mRrcQ7OQBer+GZSMunCDLiJZS" crossorigin="anonymous" defer></script>
+    <script src="ui/app.js" integrity="sha384-IjSJ0ayizRrlRuMKml6h3G2gsM+B2n1bDt5uGGkYq8+2PaSDTk8s5wdECpxQhHGS" crossorigin="anonymous" defer></script>
+    <script src="sw-register.js" integrity="sha384-CjeGNC+c22V5VLJzow2Gaf4FfP62KFRxiO6W9vJSgGjIv+hAvOuSspYKN14jr62e" crossorigin="anonymous" defer></script>
     <!-- Performance Benchmark (Internal Tooling) -->
     <!-- <script type="module" src="tests/perf_test.js"></script> -->
 </body>

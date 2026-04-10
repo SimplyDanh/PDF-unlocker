@@ -41,11 +41,147 @@ async function initEngine() {
         await pdfService.initWasm();
         isEngineReady = true;
         updateStatus('default', 'Awaiting Document', 'Drag & drop protected PDFs here, or click to browse');
+        
+        // Check for interrupted jobs after engine is ready
+        checkForInterruptedJobs();
     } catch (err) {
         console.error("Engine initialization failed:", err);
         isEngineReady = false;
         updateStatus('error', 'Browser Restricted', 'Your browser does not support background processing (WebWorkers).');
     }
+}
+
+async function checkForInterruptedJobs() {
+    try {
+        const interruptedJobs = await pdfService.getInterruptedJobs();
+        if (interruptedJobs && interruptedJobs.length > 0) {
+            const banner = document.getElementById('recovery-banner');
+            banner.classList.remove('hidden');
+            
+            // For now, we only handle the most recent interrupted job
+            const latestJob = interruptedJobs[interruptedJobs.length - 1];
+            
+            document.getElementById('resume-btn').onclick = async () => {
+                banner.classList.add('hidden');
+                await resumeJob(latestJob);
+            };
+            
+            document.getElementById('discard-btn').onclick = () => {
+                banner.classList.add('hidden');
+                // We don't delete the job here, just hide the banner.
+                // In a real app, we might want to mark it as 'discarded'.
+            };
+        }
+    } catch (err) {
+        console.error("Recovery check failed:", err);
+    }
+}
+
+async function resumeJob(job) {
+    updateStatus('loading', 'Resuming session...', 'Retrieving files from local storage');
+    
+    try {
+        const files = await pdfService.getJobFiles(job.id);
+        if (!files || files.length === 0) return;
+        
+        // Prepare state for processQueue
+        currentBatchTotal = job.totalFiles || files.length;
+        currentBatchProcessed = 0;
+        currentBatchSuccessful = 0;
+        currentBatchFiles = [];
+        fileQueue = [];
+        
+        pdfService.resumeJob(job.id);
+
+        const pendingFiles = [];
+        const completedFiles = [];
+
+        for (const fileRecord of files) {
+            if (fileRecord.status === 'completed' && fileRecord.outputBlob) {
+                currentBatchSuccessful++;
+                currentBatchProcessed++;
+                const nameWithoutExt = fileRecord.name.toLowerCase().endsWith('.pdf') ? fileRecord.name.slice(0, -4) : fileRecord.name;
+                const newFilename = `${nameWithoutExt}_unlocked.pdf`;
+                currentBatchFiles.push({ blob: fileRecord.outputBlob, name: newFilename });
+                completedFiles.push(fileRecord);
+            } else if (fileRecord.status !== 'failed') {
+                // If it was processing or pending, we resume it
+                const fileObj = fileRecord.originalBlob;
+                // Workaround: originalBlob is just a Blob, we need to add name/size for renderBentoGrid
+                Object.defineProperty(fileObj, 'name', { value: fileRecord.name, writable: true });
+                pendingFiles.push(fileObj);
+            } else {
+                currentBatchProcessed++; // Failed files count as processed
+            }
+        }
+
+        // Setup UI
+        bentoGrid.innerHTML = '';
+        bentoGrid.classList.remove('hidden');
+        dropZone.classList.add('compact');
+
+        // Render ALL files in the grid
+        await renderBentoGrid(files.map(f => ({ 
+            name: f.name, 
+            size: f.originalBlob.size 
+        })));
+
+        // Update cards for completed ones
+        completedFiles.forEach(f => {
+            updateCardStatus({ name: f.name, size: f.originalBlob.size }, 'success', 'Unlocked', f.hash);
+        });
+
+        // Add pending to queue and start
+        if (pendingFiles.length > 0) {
+            fileQueue.push(...pendingFiles);
+            // We need to bypass the startJob call in processQueue since we are resuming
+            isQueueRunning = true;
+            await continueQueue();
+        } else {
+            finalizeBatch();
+        }
+        
+    } catch (err) {
+        console.error("Resume failed:", err);
+        updateStatus('error', 'Resume Failed', 'Could not recover the interrupted session.');
+    }
+}
+
+async function continueQueue() {
+    const filesToProcess = [...fileQueue];
+    fileQueue = [];
+
+    const processingPromises = filesToProcess.map(async (file) => {
+        updateCardStatus(file, 'processing', 'Unlocking...');
+
+        const callbacks = {
+            onStatus: (state, main, sub) => {
+                if (isQueueRunning) {
+                    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, `${file.name}: ${sub}`);
+                    updateCardStatus(file, 'processing', main);
+                }
+            }
+        };
+
+        try {
+            const result = await pdfService.WorkerPool.enqueue(file, callbacks, { returnBlob: true });
+            currentBatchProcessed++;
+            if (result && result.blob) {
+                currentBatchSuccessful++;
+                updateCardStatus(file, 'success', 'Unlocked', result.hash);
+                handleProcessedFile(result.blob, file.name);
+            } else {
+                updateCardStatus(file, 'error', 'Failed');
+            }
+        } catch (error) {
+            currentBatchProcessed++;
+            console.error(`Queue: Failed to process ${file.name}:`, error);
+            updateCardStatus(file, 'error', 'Error');
+        }
+    });
+
+    await Promise.all(processingPromises);
+    finalizeBatch();
 }
 
 // Initial engine bootstrap
@@ -267,6 +403,15 @@ async function processQueue() {
     currentBatchProcessed = 0;
     currentBatchSuccessful = 0;
     currentBatchFiles = [];
+
+    // Start Job tracking in persistence layer
+    if (pdfService.startJob) {
+        try {
+            await pdfService.startJob(currentBatchTotal);
+        } catch (err) {
+            console.error("Failed to start job in persistence layer:", err);
+        }
+    }
 
     // Render/Update grid with all files in queue
     await renderBentoGrid([...fileQueue]);
