@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Phase 2-04: Theme Visual Audit (HUD Edition)', () => {
+test.describe('Phase 2-04: Theme Visual Audit (HUD Edition)', () => {
     
     const meshThemes = ['aurora', 'midnight', 'frost', 'ember'];
     const solidThemes = ['slate', 'sage', 'steel', 'rose', 'peach', 'lilac'];
