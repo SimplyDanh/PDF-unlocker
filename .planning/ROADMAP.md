@@ -74,28 +74,29 @@
 
 **Plans:**
 - [x] 05-01-PLAN.md — Advanced Security Logic & Persistence
-- [x] 05-02-PLAN.md — Integrity & Policy Hardening
-- [x] 05-03-PLAN.md — Security UX & Integration
+- **Phase 6 (Reliability & Persistence):** ✅ COMPLETED
+- **Phase 7 (Automation & Accessibility):** 🏗️ IN PROGRESS
 
 ---
 
-## Phase 6: Reliability & Persistence (IndexedDB & Chunking) 🏗️
+## Phase 6: Reliability & Persistence (IndexedDB & Chunking) ✅
 *Goal: Enable resumable processing and handle ultra-large files (>1GB) via chunked IndexedDB spillover.*
 
 **Requirements:**
-- [ ] **REQ-6.1:** Persistent Job Queue (IndexedDB storage for active batches)
-- [ ] **REQ-6.2:** Chunked Output Streaming (Spillover large buffers to IndexedDB)
-- [ ] **REQ-6.3:** Resume UX (Restore state on page reload/re-entry)
-- [ ] **REQ-6.4:** Memory Safety Audit (Flush buffers to disk for 1GB+ outputs)
+- [x] **REQ-6.1:** Persistent Job Queue (IndexedDB storage for active batches)
+- [x] **REQ-6.2:** Chunked Output Streaming (Spillover large buffers to IndexedDB)
+- [x] **REQ-6.3:** Resume UX (Restore state on page reload/re-entry)
+- [x] **REQ-6.4:** Memory Safety Audit (Flush buffers to disk for 1GB+ outputs)
 
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 - [x] 06-01-PLAN.md — IndexedDB Job Store & Schema
-- [ ] 06-02-PLAN.md — Chunked Worker API & Stream Implementation
-- [ ] 06-03-PLAN.md — Resume Logic & UI Recovery Integration
+- [x] 06-02-PLAN.md — Chunked Worker API & Stream Implementation
+- [x] 06-03-PLAN.md — Resume Logic & UI Recovery Integration
 
 ---
 
 ## Phase 7: Automation & Accessibility (Maintenance & UX) 🏗️
+
 *Goal: Harden the project lifecycle with automated CI pipelines and inclusive UI patterns.*
 
 **Requirements:**
@@ -105,6 +106,6 @@
 - [ ] **REQ-7.4:** Performance Instrumentation (Telemetry for worker memory and crash stats)
 
 **Plans:** 3 plans
-- [ ] 07-01-PLAN.md — CI/CD Automation & SRI Registry
+- [x] 07-01-PLAN.md — CI/CD Automation & SRI Registry
 - [ ] 07-02-PLAN.md — Accessibility Parity & ARIA
 - [ ] 07-03-PLAN.md — Telemetry & Diagnostics Integration

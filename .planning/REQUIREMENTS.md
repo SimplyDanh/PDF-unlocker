@@ -38,4 +38,22 @@
 - [x] **REQ-3.1:** Enable COOP/COEP Headers via Service Worker (Cross-Origin Isolation)
 - [x] **REQ-3.2:** WorkerFS Migration (Zero-copy file mounting for WASM)
 - [x] **REQ-3.3:** Memory Optimization (Buffer unlinking and heap management)
-- [ ] **REQ-3.4:** Heavy Load UI Warnings (Scale-aware progress and batch limits)
+- [x] **REQ-3.4:** Heavy Load UI Warnings (Scale-aware progress and batch limits)
+
+## 🛡️ Security Hardening (Phase 5)
+- [x] **REQ-5.1:** Integrity Checksums (SRI for all local assets)
+- [x] **REQ-5.2:** Hardened CSP v3 (Strict CSP with nonces)
+- [x] **REQ-5.3:** In-Browser Audit Log (Local-only audit trail)
+- [x] **REQ-5.4:** Cryptographic Verification (SHA-256 hashes)
+
+## ⏳ Reliability & Persistence (Phase 6)
+- [x] **REQ-6.1:** Persistent Job Queue (IndexedDB storage)
+- [x] **REQ-6.2:** Chunked Output Streaming (Large file spillover)
+- [x] **REQ-6.3:** Resume UX (Restore state on re-entry)
+- [x] **REQ-6.4:** Memory Safety Audit (Flush buffers for 1GB+)
+
+## 🤖 Automation & Accessibility (Phase 7)
+- [x] **REQ-7.1:** Automated SRI Pipeline (Auto-generate hashes for vendor assets in CI)
+- [x] **REQ-7.2:** Multi-Browser CI (Playwright testing for FF/Safari)
+- [ ] **REQ-7.3:** Accessibility Audit (ARIA parity for Bento Grid and Theme HUD)
+- [ ] **REQ-7.4:** Performance Instrumentation (Telemetry for worker memory)
