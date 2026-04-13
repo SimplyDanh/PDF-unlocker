@@ -93,14 +93,10 @@ async function processFile(file, fileName) {
 
     const mountPoint = '/mnt';
     let isMounted = false;
+    let inputPath = '';
+    const outputName = `output_${Date.now()}.pdf`;
 
     try {
-        self.postMessage({ 
-            type: 'status', 
-            state: 'processing', 
-            main: 'Unlocking locally...', 
-            sub: 'Accessing file via WorkerFS zero-copy mounting.' 
-        });
 
         // Magic-byte validation using minimal memory (only 4 bytes)
         const headerBuffer = await file.slice(0, 4).arrayBuffer();
@@ -117,22 +113,37 @@ async function processFile(file, fileName) {
             return;
         }
 
-        // Create mount point if it doesn't exist
-        try {
-            qpdfModule.FS.mkdir(mountPoint);
-        } catch (e) {
-            // Directory might already exist (code 17 is EEXIST)
-            if (e.errno !== 17) console.warn('Worker: FS.mkdir error:', e);
+        const USE_MEMFS_THRESHOLD = 150 * 1024 * 1024; // 150MB
+
+        if (file.size <= USE_MEMFS_THRESHOLD) {
+            self.postMessage({ 
+                type: 'status', 
+                state: 'processing', 
+                main: 'Loading into memory...', 
+                sub: 'Optimizing for high-performance processing.' 
+            });
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            inputPath = `input_${Date.now()}.pdf`;
+            qpdfModule.FS.writeFile(inputPath, uint8Array);
+            isMounted = false;
+        } else {
+            try {
+                qpdfModule.FS.mkdir(mountPoint);
+            } catch (e) {
+                if (e.errno !== 17) console.warn('Worker: FS.mkdir error:', e);
+            }
+            qpdfModule.FS.mount(qpdfModule.WORKERFS, { files: [file] }, mountPoint);
+            isMounted = true;
+            inputPath = `${mountPoint}/${file.name}`;
+            
+            self.postMessage({ 
+                type: 'status', 
+                state: 'processing', 
+                main: 'Unlocking locally...', 
+                sub: 'Accessing file via WorkerFS zero-copy mounting.' 
+            });
         }
-
-        // Mount the file via WorkerFS. This provides a virtual file in the WASM FS
-        // that points directly to the browser's File handle, avoiding a memory copy.
-        qpdfModule.FS.mount(qpdfModule.WORKERFS, { files: [file] }, mountPoint);
-        isMounted = true;
-
-        // Path inside WorkerFS is simply the name of the file object
-        const inputPath = `${mountPoint}/${file.name}`;
-        const outputName = `output_${Date.now()}.pdf`;
 
         self.postMessage({ 
             type: 'status', 
@@ -228,12 +239,18 @@ async function processFile(file, fileName) {
             sub: 'The document appears to be corrupted or too heavily encrypted.' 
         });
     } finally {
-        // Ensure we always unmount to free up the mount point and file handle
+        // Ensure we always unmount or unlink to free up memory/mount points
         if (isMounted) {
             try {
                 qpdfModule.FS.unmount(mountPoint);
             } catch (e) {
                 console.warn('Worker: Failed to unmount WorkerFS:', e);
+            }
+        } else if (inputPath && inputPath.startsWith('input_')) {
+            try {
+                qpdfModule.FS.unlink(inputPath);
+            } catch (e) {
+                console.warn('Worker: Failed to unlink MEMFS input file:', e);
             }
         }
     }
