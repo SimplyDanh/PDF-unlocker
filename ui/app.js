@@ -852,12 +852,31 @@ const modalBackdrop = document.getElementById('modal-backdrop');
 const modalClose = document.getElementById('modal-close');
 const aboutPanel = document.querySelector('.about-panel');
 
+/**
+ * Robustly focus an element, handling browser-specific timing issues (e.g., WebKit)
+ * @param {HTMLElement} el 
+ * @param {number} maxAttempts 
+ */
+function robustFocus(el, maxAttempts = 5) {
+    if (!el) return;
+    let attempts = 0;
+    const attempt = () => {
+        el.focus();
+        if (document.activeElement === el || attempts >= maxAttempts) {
+            return;
+        }
+        attempts++;
+        setTimeout(attempt, 100);
+    };
+    attempt();
+}
+
 function openModal() {
     modalBackdrop.classList.add('open');
     modalBackdrop.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    // Move focus into the modal for screen readers - small delay for transition
-    setTimeout(() => modalClose.focus(), 100);
+    // Move focus into the modal for screen readers - delay for CSS transition
+    setTimeout(() => robustFocus(modalClose), 450);
 }
 
 function closeModal() {
@@ -887,8 +906,8 @@ async function openAuditLog() {
     auditModalBackdrop.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     
-    // Task 7: Focus after visible
-    setTimeout(() => auditModalClose.focus(), 100);
+    // Task 7: Focus after visible - delay for CSS transition
+    setTimeout(() => robustFocus(auditModalClose), 450);
 
     await refreshAuditLog();
 }

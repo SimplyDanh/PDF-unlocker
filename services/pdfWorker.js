@@ -82,7 +82,9 @@ async function initWasm() {
 }
 
 /**
- * Process a PDF file using WorkerFS zero-copy mounting.
+ * Process a PDF file using MEMFS (≤150MB) or WorkerFS (>150MB).
+ * MEMFS keeps the file entirely in the WASM heap for fast random-access I/O.
+ * WorkerFS is used as a fallback for very large files to avoid OOM.
  * @param {File|Blob} file - The input PDF file.
  * @param {string} fileName - Original filename for display.
  */
@@ -126,6 +128,8 @@ async function processFile(file, fileName) {
             const uint8Array = new Uint8Array(arrayBuffer);
             inputPath = `input_${Date.now()}.pdf`;
             qpdfModule.FS.writeFile(inputPath, uint8Array);
+            // Security: zero source buffer after writing to WASM FS
+            uint8Array.fill(0);
             isMounted = false;
         } else {
             try {
@@ -152,8 +156,20 @@ async function processFile(file, fileName) {
             sub: 'Removing restrictions securely via QPDF core.' 
         });
 
-        // Execute QPDF decryption
-        qpdfModule.callMain(["--decrypt", "--preserve-unreferenced-resources", inputPath, outputName]);
+        // Execute QPDF decryption with maximum performance flags:
+        // --preserve-unreferenced-resources: skip object cleanup pass
+        // --compress-streams=n: skip recompression of streams (biggest perf win)
+        // --decode-level=none: skip stream decoding entirely
+        // --object-streams=preserve: keep existing object stream structure
+        qpdfModule.callMain([
+            "--decrypt",
+            "--preserve-unreferenced-resources",
+            "--compress-streams=n",
+            "--decode-level=none",
+            "--object-streams=preserve",
+            inputPath,
+            outputName
+        ]);
         
         self.postMessage({ 
             type: 'status', 

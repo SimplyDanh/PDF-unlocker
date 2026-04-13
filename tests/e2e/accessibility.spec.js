@@ -146,7 +146,8 @@ test.describe('Accessibility & Keyboard Navigation (REQ-7.3)', () => {
         const linkedinLink = page.locator('.dev-credit-info a');
         const viewAuditBtn = page.locator('#view-audit-log-btn');
         
-        // Initial focus should be on close button
+        // Wait for programmatic focus to land (WebKit needs longer)
+        await page.waitForFunction(() => document.activeElement?.id === 'modal-close', { timeout: 5000 });
         await expect(closeBtn).toBeFocused();
 
         // Path: Close -> LinkedIn -> View Audit
@@ -176,6 +177,8 @@ test.describe('Accessibility & Keyboard Navigation (REQ-7.3)', () => {
         await expect(auditModal).toHaveClass(/open/);
 
         const closeBtn = page.locator('#audit-modal-close');
+        // Wait for programmatic focus to land (WebKit needs longer)
+        await page.waitForFunction(() => document.activeElement?.id === 'audit-modal-close', { timeout: 5000 });
         await expect(closeBtn).toBeFocused();
 
         // Tab should loop back if no other focusable (empty state)

@@ -23,7 +23,7 @@ test.describe('Phase 2-04: Theme Visual Audit (HUD Edition)', () => {
 
             // Click the swatch (force: true because it might be partially offscreen during animation)
             const swatch = page.locator(`.theme-swatch[data-id="${theme}"]`);
-            await swatch.click({ force: true });
+            await swatch.evaluate(el => el.click());
             
             // Wait for transitions
             await page.waitForTimeout(600);
