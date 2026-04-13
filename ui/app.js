@@ -149,15 +149,16 @@ async function continueQueue() {
     const filesToProcess = [...fileQueue];
     fileQueue = [];
 
-    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, 'Resuming batch...');
-
-    const processingPromises = filesToProcess.map(async (file) => {
+    const startProcessed = currentBatchProcessed;
+    const processingPromises = filesToProcess.map(async (file, index) => {
+        const fileNumber = startProcessed + index + 1;
         updateCardStatus(file, 'processing', 'Unlocking...');
 
         const callbacks = {
             onStatus: (state, main, sub) => {
                 if (isQueueRunning) {
-                    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, `${file.name}: ${sub}`);
+                    const displaySub = formatStepStatus(file, sub);
+                    updateStatus('processing', `Unlocking (${fileNumber}/${currentBatchTotal})`, `${file.name}: ${displaySub}`);
                     updateCardStatus(file, 'processing', main);
                 }
             }
@@ -442,6 +443,25 @@ function updateCardStatus(file, state, text, hash = null) {
     }
 }
 
+function formatStepStatus(file, sub) {
+    let displaySub = sub;
+
+    // Scale-aware feedback
+    if (file.size > 250 * 1024 * 1024) {
+        displaySub = `Large File Optimization active... ${sub}`;
+    }
+
+    if (sub.includes("Accessing file via WorkerFS") || sub.includes("Optimizing for high-performance processing")) {
+        return `Step 1/3: Mounting virtual filesystem (${(file.size / 1024 / 1024).toFixed(0)}MB)`;
+    } else if (sub.includes("Removing restrictions securely")) {
+        return "Step 2/3: Unlocking core...";
+    } else if (sub.includes("Preparing output") || sub.includes("Using chunked transfer")) {
+        return "Step 3/3: Finalizing memory...";
+    }
+
+    return displaySub;
+}
+
 const MAX_BATCH_FILES = 20;
 let fileQueue = [];
 let isQueueRunning = false;
@@ -475,31 +495,16 @@ async function processQueue() {
     const filesToProcess = [...fileQueue];
     fileQueue = [];
 
-    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, 'Initializing batch...');
-
-    const processingPromises = filesToProcess.map(async (file) => {
+    const startProcessed = currentBatchProcessed;
+    const processingPromises = filesToProcess.map(async (file, index) => {
+        const fileNumber = startProcessed + index + 1;
         updateCardStatus(file, 'processing', 'Unlocking...');
 
         const callbacks = {
             onStatus: (state, main, sub) => {
-                // Update global status with current file info
                 if (isQueueRunning) {
-                    let displaySub = sub;
-                    
-                    // Task 2: Scale-aware feedback & Granular steps
-                    if (file.size > 250 * 1024 * 1024) {
-                        displaySub = `Large File Optimization active... ${sub}`;
-                    }
-
-                    if (sub.includes("Accessing file via WorkerFS")) {
-                        displaySub = `Step 1/3: Mounting virtual filesystem (${(file.size / 1024 / 1024).toFixed(0)}MB)`;
-                    } else if (sub.includes("Removing restrictions securely")) {
-                        displaySub = "Step 2/3: Unlocking core...";
-                    } else if (sub.includes("Preparing output")) {
-                        displaySub = "Step 3/3: Finalizing memory...";
-                    }
-
-                    updateStatus('processing', `Unlocking (${currentBatchProcessed + 1}/${currentBatchTotal})`, `${file.name}: ${displaySub}`);
+                    const displaySub = formatStepStatus(file, sub);
+                    updateStatus('processing', `Unlocking (${fileNumber}/${currentBatchTotal})`, `${file.name}: ${displaySub}`);
                     updateCardStatus(file, 'processing', main);
                 }
             }
@@ -599,6 +604,14 @@ document.getElementById('download-zip-btn').addEventListener('click', async () =
         triggerDownload(zipBlob, 'Unlocked_PDFs.zip');
         hideBatchOverlay();
         currentBatchFiles = [];
+        
+        // Cleanup UI: Clear the grid and reset drop zone
+        if (bentoGrid) {
+            bentoGrid.innerHTML = '';
+            bentoGrid.classList.add('hidden');
+        }
+        dropZone.classList.remove('compact');
+        
         updateStatus('success', 'Downloaded!', 'Your ZIP archive is ready.');
         resetState();
     } catch (err) {
