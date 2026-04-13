@@ -1085,7 +1085,6 @@ input[type="file"] {
     box-shadow: 
         0 4px 6px -1px rgba(0, 0, 0, 0.05),
         inset 0 0 0 1px var(--inner-border);
-    view-transition-name: file-card;
 }
 
 .file-card:hover {

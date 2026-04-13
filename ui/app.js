@@ -339,6 +339,10 @@ async function renderBentoGrid(files) {
             const card = document.createElement('div');
             card.className = 'file-card pending';
             card.id = cardId;
+            // Assign unique view-transition-name to prevent conflicts during layout animations
+            if (document.startViewTransition) {
+                card.style.viewTransitionName = cardId;
+            }
             card.setAttribute('role', 'listitem');
             // Only the first card in the grid is focusable initially
             card.setAttribute('tabindex', bentoGrid.children.length === 0 ? '0' : '-1');
@@ -579,7 +583,7 @@ async function finalizeBatch() {
     if (currentBatchFiles.length === 1) {
         // No longer automatic. User must click the button on the card.
         const file = currentBatchFiles[0];
-        updateStatus('success', 'Success!', `${file.name} is ready for download.`);
+        updateStatus('success', 'Success!', `Click the download icon on the card below to save your file.`);
         resetState();
     } else {
         // Show batch complete overlay for multiple files
@@ -603,15 +607,15 @@ document.getElementById('download-zip-btn').addEventListener('click', async () =
     }
 });
 
-document.getElementById('download-individual-btn').addEventListener('click', async () => {
+document.getElementById('download-individual-btn').addEventListener('click', () => {
     hideBatchOverlay();
-    updateStatus('processing', 'Downloading...', 'Delivering files individually.');
-    await batchService.processIndividually(currentBatchFiles, (file) => {
-        triggerDownload(file.blob, file.name);
-    });
-    currentBatchFiles = [];
-    updateStatus('success', 'Complete!', 'All files have been downloaded.');
-    resetState();
+    updateStatus('success', 'Ready for Download', 'Click the download icon on each card below to save your files.');
+    
+    // Accessibility: Focus the first successful card
+    const firstSuccessCard = bentoGrid.querySelector('.file-card.success');
+    if (firstSuccessCard) {
+        firstSuccessCard.focus();
+    }
 });
 
 document.getElementById('reset-batch-btn').addEventListener('click', () => {
