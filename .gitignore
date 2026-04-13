@@ -9,3 +9,6 @@ tests/perf_test.js
 node_modules/
 test-results/
 memory_slots/
+
+# Test Assets
+NAB19.pdf
