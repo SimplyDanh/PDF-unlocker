@@ -183,7 +183,7 @@ describe('pdfWorker', () => {
         expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
             type: 'status', 
             state: 'processing',
-            sub: expect.stringContaining('WorkerFS')
+            main: 'Loading into memory...'
         }));
 
         // Check for success message with hash
@@ -199,17 +199,12 @@ describe('pdfWorker', () => {
         const successMsg = postMessage.mock.calls.find(call => call[0].type === 'success')[0];
         expect(successMsg.hash).toHaveLength(64); // SHA-256 hex string
 
-        // Verify WorkerFS interactions
-        expect(mockQpdf.FS.mount).toHaveBeenCalledWith(
-            mockQpdf.WORKERFS, 
-            expect.objectContaining({ files: [file] }), 
-            "/mnt"
-        );
-        expect(mockQpdf.FS.unmount).toHaveBeenCalledWith("/mnt");
+        // Verify MEMFS interactions (for small files)
+        expect(mockQpdf.FS.writeFile).toHaveBeenCalled();
         expect(mockQpdf.FS.unlink).toHaveBeenCalled();
     });
 
-    it('should not require manual buffer zeroing with WorkerFS (SEC-3 transition)', async () => {
+    it('should securely zero buffers after writing to MEMFS', async () => {
         // With WorkerFS, the file is not copied into WASM heap initially.
         // We verify that the process still completes securely.
         const mockQpdf = {
@@ -217,9 +212,12 @@ describe('pdfWorker', () => {
                 mkdir: vi.fn(),
                 mount: vi.fn(),
                 unmount: vi.fn(),
+                writeFile: vi.fn(),
                 readFile: vi.fn().mockReturnValue(new Uint8Array([0x25, 0x50, 0x44, 0x46])),
-                unlink: vi.fn(),
-                stat: vi.fn().mockReturnValue({ size: 100 })
+                open: vi.fn().mockReturnValue(1),
+                close: vi.fn(),
+                stat: vi.fn().mockReturnValue({ size: 10 * 1024 * 1024 }), // 10MB < 150MB -> MEMFS
+                unlink: vi.fn()
             },
             WORKERFS: {},
             callMain: vi.fn()
@@ -251,6 +249,7 @@ describe('pdfWorker', () => {
                 mkdir: vi.fn(),
                 mount: vi.fn(),
                 unmount: vi.fn(),
+                writeFile: vi.fn(),
                 stat: vi.fn().mockReturnValue({ size: largeSize }),
                 open: vi.fn().mockReturnValue(1), // fd = 1
                 read: vi.fn((fd, buffer, offset, length, position) => {
@@ -281,7 +280,7 @@ describe('pdfWorker', () => {
         // Verify status message for streaming
         expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ 
             type: 'status', 
-            main: 'Streaming output...' 
+            main: 'Finalizing...' 
         }));
 
         // Verify chunks were sent
