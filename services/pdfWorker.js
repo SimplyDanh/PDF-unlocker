@@ -142,7 +142,7 @@ async function processFile(file, fileName) {
         });
 
         // Execute QPDF decryption
-        qpdfModule.callMain(["--decrypt", inputPath, outputName]);
+        qpdfModule.callMain(["--decrypt", "--preserve-unreferenced-resources", inputPath, outputName]);
         
         self.postMessage({ 
             type: 'status', 

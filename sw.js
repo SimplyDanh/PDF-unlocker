@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pdf-unlocker-v6';
+const CACHE_NAME = 'pdf-unlocker-v7';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

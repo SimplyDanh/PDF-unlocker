@@ -25,6 +25,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@neslinesli93/qpdf-wasm": "^0.3.0",
     "serve-handler": "^6.1.7"
   }
 }

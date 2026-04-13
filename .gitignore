@@ -8,3 +8,4 @@ PERFORMANCE_REPORT.md
 tests/perf_test.js
 node_modules/
 test-results/
+memory_slots/
